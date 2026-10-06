@@ -1,0 +1,1529 @@
+project: a2d
+backbone: a2d
+default_boundary: module
+default_language: python
+nodes:
+- id: a2d
+  title: A2D
+  status: implemented
+  boundary: null
+  parent: null
+  interface:
+    protocol: entrypoint
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  notes: 'Repository root. A2D (Adult ADHD assistant): a task/action-item manager plus a serial AND-gate
+    pulse-processing API, shipped as one FastAPI deployable under app/.'
+  prompt: ''
+- id: http_gateway
+  title: HTTP (uvicorn)
+  status: implemented
+  boundary: null
+  parent: a2d
+  interface:
+    protocol: gateway
+    transport: http
+    layout: skip
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  notes: HTTP transport. Served by uvicorn as `uvicorn app.server.main:app`. Organizational only.
+  prompt: ''
+- id: app
+  title: A2D app
+  status: implemented
+  boundary: null
+  parent: http_gateway
+  interface:
+    protocol: service
+    language: python
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  notes: 'Single deployable unit: FastAPI backend (server/), domain models (models/), logic-gate library
+    (lib/). It also serves the static browser UI in ui/ (index.html, login.html, css/, js/app.js), which
+    is not modeled in this graph and must be left untouched. Runtime deps: fastapi, uvicorn, pydantic
+    v2, python-dotenv.'
+  prompt: ''
+- id: models
+  title: ''
+  status: implemented
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports:
+    - Task
+    - ActionItem
+    - ActivityAchieved
+    - ActivityProcessor
+    - User
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Domain model package. Importers use `from models import ...`, so the package __init__ must re-export
+    every model listed in exports.
+  prompt_template: ''
+  prompt: ''
+- id: activity_achieved
+  title: ActivityAchieved
+  status: implemented
+  boundary: null
+  parent: models
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: achieved
+      type:
+        type: boolean
+      required: false
+      notes: defaults to false
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Abstract base carrying a single completion flag `achieved` (default false). In Python it is an
+    ABC; action_item and task both extend it.
+  prompt_template: ''
+  prompt: ''
+- id: action_item
+  title: ActionItem
+  status: implemented
+  boundary: null
+  parent: models
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: id
+      type:
+        type: integer
+      required: true
+    - name: description
+      type:
+        type: string
+      required: true
+    - name: achieved
+      type:
+        type: boolean
+      required: false
+      notes: defaults to false
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: One checklist step of a task. Python @dataclass that extends ActivityAchieved (see activity_achieved);
+    `achieved` is inherited and defaults to false.
+  prompt_template: ''
+  prompt: ''
+- id: user_group
+  title: UserGroup
+  status: implemented
+  boundary: null
+  parent: models
+  interface:
+    protocol: data-model
+    model_kind: enum
+    layout: file
+    enum_type: string
+    enum_values:
+    - name: USER
+      value: user
+    - name: ADMIN
+      value: admin
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Allowed values of User.group. Currently a typing.Literal in the source.
+  prompt_template: ''
+  prompt: ''
+- id: user
+  title: User
+  status: implemented
+  boundary: null
+  parent: models
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: name
+      type:
+        type: string
+      required: true
+    - name: password
+      type:
+        type: string
+      required: true
+      notes: stored and compared in plaintext
+    - name: group
+      type:
+        type: user_group
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Authenticated user record loaded from server/users.json by auth_service.
+  prompt_template: ''
+  prompt: ''
+- id: activity_processor
+  title: ActivityProcessor
+  status: implemented
+  boundary: null
+  parent: models
+  interface:
+    protocol: contract
+    layout: file
+    methods:
+    - name: activities
+      params: []
+      returns:
+        type: list
+        items:
+          type: activity_achieved
+    - name: process_activity
+      params: []
+      returns:
+        type: boolean
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  notes: Abstract processor over a list of activities. `activities` is a read-only abstract property.
+    `process_activity` also accepts an optional `callback` parameter (a callable taking the activities
+    list and returning a boolean) which this schema cannot type, so it is omitted from the method signature
+    above; implementers must still accept it.
+  prompt_template: ''
+  prompt: ''
+- id: task
+  title: Task
+  status: implemented
+  boundary: null
+  parent: models
+  interface:
+    protocol: class
+    layout: file
+    fields:
+    - name: id
+      type:
+        type: integer
+    - name: task_name
+      type:
+        type: string
+    - name: description
+      type:
+        type: string
+    - name: priority
+      type:
+        type: integer
+    - name: achieved
+      type:
+        type: boolean
+    - name: context
+      type:
+        type: string
+    - name: creation_time
+      type:
+        type: optional
+        of:
+          type: string
+    - name: activities
+      type:
+        type: list
+        items:
+          type: action_item
+  contract_version: 0.0.0
+  dependencies:
+  - node: activity_achieved
+  - node: action_item
+  calls: []
+  data_flows: []
+  implements:
+  - node: activity_processor
+  stub_behavior: ''
+  tests: []
+  notes: A task with an ordered list of ActionItems. Extends ActivityAchieved (achieved defaults false)
+    and implements ActivityProcessor. Constructor keyword args mirror fields; context defaults to 'No
+    Context', activities defaults to [], creation_time to None.
+  prompt_template: ''
+  prompt: ''
+- id: activities
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: list
+      items:
+        type: action_item
+    errors:
+    - code: TypeError
+      description: 'setter: value is not a list, or an item is not an ActionItem'
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: '@property getter returning the internal activities list, with a validating @setter that only
+    accepts a list of ActionItem instances.'
+  prompt_template: ''
+  prompt: ''
+- id: process_activity
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: boolean
+    errors: []
+    preconditions: []
+    postconditions:
+    - achieved is set to true, or to callback(activities) when a callback is given
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Marks the task achieved. If a callback is supplied, achieved becomes callback(self.activities).
+    Returns the resulting achieved value. Takes optional `callback` (untypable here; see activity_processor
+    notes).
+  prompt_template: ''
+  prompt: ''
+- id: lib
+  title: ''
+  status: implemented
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Standalone, framework-free library code. mapper.py inserts this folder on sys.path and imports
+    it as top-level `logic_gates`.
+  prompt_template: ''
+  prompt: ''
+- id: pulse_result
+  title: PulseResult
+  status: implemented
+  boundary: null
+  parent: lib
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: input_pin
+      type:
+        type: string
+      required: true
+    - name: pulse
+      type:
+        type: string
+      required: true
+      notes: normalized HIGH or LOW
+    - name: latched_inputs
+      type:
+        type: list
+        items:
+          type: integer
+      required: true
+    - name: output
+      type:
+        type: integer
+      required: true
+      notes: 0 or 1
+    - name: reset
+      type:
+        type: boolean
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Result of one pulse. Returned as a plain dict in the source; named here because the schema has
+    no untyped object.
+  prompt_template: ''
+  prompt: ''
+- id: logic_gates
+  title: SerialAndGateProcessor
+  status: implemented
+  boundary: null
+  parent: lib
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: pulse_result
+  calls: []
+  data_flows: []
+  implements: []
+  stub_behavior: ''
+  tests: []
+  notes: 'Per-pin latching AND gate. Keeps private per-pin state {inputs: list of 1s, output} keyed by
+    input_pin, created lazily on first use. State lives only in memory.'
+  prompt_template: ''
+  prompt: ''
+- id: process_pulse
+  title: ''
+  status: implemented
+  boundary: null
+  parent: logic_gates
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: input_pin
+      type:
+        type: string
+    - name: pulse
+      type:
+        type: string
+    returns:
+      type: pulse_result
+    errors:
+    - code: ValueError
+      description: pulse is not HIGH/LOW after strip+upper, or input_pin is not an integer string
+    preconditions:
+    - input_pin parses as an integer (it is the AND-gate arity)
+    postconditions:
+    - LOW clears the pin's latched inputs, sets output 0 and reset true
+    - HIGH appends 1 to the pin's inputs; output is 1 once len(inputs) >= int(input_pin), else 0
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Normalize pulse with strip().upper(). Return a pulse_result; on HIGH return a copy of the latched
+    inputs list.
+  prompt_template: ''
+  prompt: ''
+- id: server
+  title: ''
+  status: implemented
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: FastAPI backend package. Loads server/.env via python-dotenv.
+  prompt_template: ''
+  prompt: ''
+- id: main
+  title: ''
+  status: implemented
+  boundary: null
+  parent: server
+  interface:
+    protocol: module
+    exports:
+    - app
+    layout: file
+  contract_version: 0.0.0
+  dependencies:
+  - node: mapper
+  - node: tasks_router
+  - node: auth_router
+  - node: record_payload
+  - node: logic_gate_response
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: FastAPI application `app` (title 'Serial Logic Gate API', version 1.0.0). Includes tasks_router
+    and auth_router, and mounts ../ui as static files at /static (mount registered last so it does not
+    shadow API routes).
+  prompt_template: ''
+  prompt: ''
+- id: record_payload
+  title: RecordPayload
+  status: implemented
+  boundary: null
+  parent: server
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: records
+      type:
+        type: map
+        key:
+          type: string
+        value:
+          type: union
+          items:
+          - type: map
+            key:
+              type: string
+            value:
+              type: string
+          - type: string
+      required: true
+      notes: record id -> either a dict holding the pulse under env RECORD_KEY, or the pulse itself
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Request body for /logic-gate/process. Declared inline in main.py in the source as Dict[str, Any];
+    narrowed here to the two shapes mapper actually accepts.
+  prompt_template: ''
+  prompt: ''
+- id: logic_gate_response
+  title: LogicGateResponse
+  status: implemented
+  boundary: null
+  parent: server
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: message
+      type:
+        type: string
+      required: true
+    - name: results
+      type:
+        type: map
+        key:
+          type: string
+        value:
+          type: pulse_result
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Response body of /logic-gate/process.
+  prompt_template: ''
+  prompt: ''
+- id: health
+  title: ''
+  status: implemented
+  boundary: null
+  parent: main
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: map
+      key:
+        type: string
+      value:
+        type: string
+    http_method: GET
+    route: /health
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: 'Liveness probe. Always returns {"status": "ok"}.'
+  prompt_template: ''
+  prompt: ''
+- id: root
+  title: ''
+  status: implemented
+  boundary: null
+  parent: main
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: string
+    http_method: GET
+    route: /
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Serve ui/index.html as text/html (FileResponse).
+  prompt_template: ''
+  prompt: ''
+- id: login_page
+  title: ''
+  status: implemented
+  boundary: null
+  parent: main
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: string
+    http_method: GET
+    route: /login.html
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Serve ui/login.html as text/html (FileResponse).
+  prompt_template: ''
+  prompt: ''
+- id: process_logic_gate
+  title: ''
+  status: implemented
+  boundary: null
+  parent: main
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: payload
+      type:
+        type: record_payload
+    returns:
+      type: logic_gate_response
+    http_method: POST
+    route: /logic-gate/process
+    errors:
+    - code: '400'
+      description: mapper raised ValueError; detail is the error message
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: map_records_to_logic
+    operation_name: map_records_to_logic
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Pass payload.records to map_records_to_logic; respond with message 'Records processed successfully'
+    and the results.
+  prompt_template: ''
+  prompt: ''
+- id: mapper
+  title: ''
+  status: implemented
+  boundary: null
+  parent: server
+  interface:
+    protocol: module
+    exports: []
+    layout: file
+  contract_version: 0.0.0
+  dependencies:
+  - node: lib
+  - node: pulse_result
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Bridges HTTP records to the logic-gate library. Holds one module-level SerialAndGateProcessor
+    instance, so latched state persists across requests. Reads env RECORD_KEY (from server/.env) to locate
+    the pulse inside dict records.
+  prompt_template: ''
+  prompt: ''
+- id: map_records_to_logic
+  title: ''
+  status: implemented
+  boundary: null
+  parent: mapper
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: records
+      type:
+        type: map
+        key:
+          type: string
+        value:
+          type: union
+          items:
+          - type: map
+            key:
+              type: string
+            value:
+              type: string
+          - type: string
+    returns:
+      type: map
+      key:
+        type: string
+      value:
+        type: pulse_result
+    errors:
+    - code: ValueError
+      description: records is not a dict, or propagated from process_pulse
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: process_pulse
+    operation_name: process_pulse
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: 'For each (record_id, record): pulse = record[RECORD_KEY] if record is a dict else record; result
+    = processor.process_pulse(str(record_id), pulse); key results by str(record_id).'
+  prompt_template: ''
+  prompt: ''
+- id: auth
+  title: ''
+  status: implemented
+  boundary: null
+  parent: server
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: User login. Users come from server/users.json.
+  prompt_template: ''
+  prompt: ''
+- id: auth_schemas
+  title: ''
+  status: implemented
+  boundary: null
+  parent: auth
+  interface:
+    protocol: module
+    exports: []
+    layout: skip
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Pydantic request/response models for auth.
+  prompt_template: ''
+  prompt: ''
+- id: login_schema
+  title: LoginSchema
+  status: implemented
+  boundary: null
+  parent: auth_schemas
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: name
+      type:
+        type: string
+      required: true
+    - name: password
+      type:
+        type: string
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Login request body.
+  prompt_template: ''
+  prompt: ''
+- id: login_response_schema
+  title: LoginResponseSchema
+  status: implemented
+  boundary: null
+  parent: auth_schemas
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: name
+      type:
+        type: string
+      required: true
+    - name: group
+      type:
+        type: string
+      required: true
+    - name: message
+      type:
+        type: string
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to:
+  - node: user
+  notes: Login success body built from a User.
+  prompt_template: ''
+  prompt: ''
+- id: auth_service
+  title: AuthService
+  status: implemented
+  boundary: null
+  parent: auth
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: models
+  calls: []
+  data_flows: []
+  implements: []
+  stub_behavior: ''
+  tests: []
+  notes: Loads users once at construction from server/users.json (a JSON object of name -> {name, password,
+    group}); a missing or unreadable file yields no users.
+  prompt_template: ''
+  prompt: ''
+- id: authenticate
+  title: ''
+  status: implemented
+  boundary: null
+  parent: auth_service
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: name
+      type:
+        type: string
+    - name: password
+      type:
+        type: string
+    returns:
+      type: optional
+      of:
+        type: user
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Return the User when name exists and password matches exactly, else None.
+  prompt_template: ''
+  prompt: ''
+- id: auth_router
+  title: ''
+  status: implemented
+  boundary: null
+  parent: auth
+  interface:
+    protocol: module
+    exports:
+    - router
+    layout: file
+  contract_version: 0.0.0
+  dependencies:
+  - node: auth_schemas
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: APIRouter(prefix='/auth', tags=['auth']) with a module-level AuthService instance.
+  prompt_template: ''
+  prompt: ''
+- id: login
+  title: ''
+  status: implemented
+  boundary: null
+  parent: auth_router
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: credentials
+      type:
+        type: login_schema
+    returns:
+      type: login_response_schema
+    http_method: POST
+    route: /auth/login
+    errors:
+    - code: '401'
+      description: Invalid username or password
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: authenticate
+    operation_name: authenticate
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Authenticate; on success return name, group and message 'Login successful'.
+  prompt_template: ''
+  prompt: ''
+- id: tasks
+  title: ''
+  status: implemented
+  boundary: null
+  parent: server
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Task CRUD. Tasks persist to server/task.json.
+  prompt_template: ''
+  prompt: ''
+- id: task_schemas
+  title: ''
+  status: implemented
+  boundary: null
+  parent: tasks
+  interface:
+    protocol: module
+    exports: []
+    layout: skip
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Pydantic request/response models for tasks.
+  prompt_template: ''
+  prompt: ''
+- id: action_item_schema
+  title: ActionItemSchema
+  status: implemented
+  boundary: null
+  parent: task_schemas
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: id
+      type:
+        type: integer
+      required: true
+    - name: description
+      type:
+        type: string
+      required: true
+    - name: achieved
+      type:
+        type: boolean
+      required: false
+      notes: defaults to false
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to:
+  - node: action_item
+  notes: Wire shape of one ActionItem.
+  prompt_template: ''
+  prompt: ''
+- id: task_create_schema
+  title: TaskCreateSchema
+  status: implemented
+  boundary: null
+  parent: task_schemas
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: id
+      type:
+        type: integer
+      required: true
+    - name: task_name
+      type:
+        type: string
+      required: true
+    - name: description
+      type:
+        type: string
+      required: true
+    - name: priority
+      type:
+        type: integer
+      required: true
+    - name: context
+      type:
+        type: string
+      required: false
+      notes: defaults to 'No Context'
+    - name: activities
+      type:
+        type: optional
+        of:
+          type: list
+          items:
+            type: action_item_schema
+      required: false
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to:
+  - node: task
+  notes: Create-task request body. Caller supplies the id.
+  prompt_template: ''
+  prompt: ''
+- id: task_update_schema
+  title: TaskUpdateSchema
+  status: implemented
+  boundary: null
+  parent: task_schemas
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: task_name
+      type:
+        type: optional
+        of:
+          type: string
+      required: false
+    - name: description
+      type:
+        type: optional
+        of:
+          type: string
+      required: false
+    - name: priority
+      type:
+        type: optional
+        of:
+          type: integer
+      required: false
+    - name: context
+      type:
+        type: optional
+        of:
+          type: string
+      required: false
+    - name: achieved
+      type:
+        type: optional
+        of:
+          type: boolean
+      required: false
+    - name: activities
+      type:
+        type: optional
+        of:
+          type: list
+          items:
+            type: action_item_schema
+      required: false
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to: []
+  notes: Partial update; only non-null fields are applied.
+  prompt_template: ''
+  prompt: ''
+- id: task_response_schema
+  title: TaskResponseSchema
+  status: implemented
+  boundary: null
+  parent: task_schemas
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: id
+      type:
+        type: integer
+      required: true
+    - name: task_name
+      type:
+        type: string
+      required: true
+    - name: description
+      type:
+        type: string
+      required: true
+    - name: priority
+      type:
+        type: integer
+      required: true
+    - name: context
+      type:
+        type: string
+      required: true
+    - name: achieved
+      type:
+        type: boolean
+      required: true
+    - name: creation_time
+      type:
+        type: optional
+        of:
+          type: string
+      required: false
+    - name: activities
+      type:
+        type: list
+        items:
+          type: action_item_schema
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  maps_to:
+  - node: task
+  notes: Task response body (from_attributes enabled).
+  prompt_template: ''
+  prompt: ''
+- id: task_service
+  title: TaskService
+  status: implemented
+  boundary: null
+  parent: tasks
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: models
+  - node: task_schemas
+  calls: []
+  data_flows: []
+  implements: []
+  stub_behavior: ''
+  tests: []
+  notes: In-memory dict of task id -> Task, loaded from server/task.json at construction (missing or corrupt
+    file -> empty) and fully rewritten to that file after every mutation. Private helpers serialize tasks
+    to/from plain dicts, including nested activities.
+  prompt_template: ''
+  prompt: ''
+- id: create_task
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task_service
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_data
+      type:
+        type: task_create_schema
+    returns:
+      type: task
+    errors: []
+    preconditions: []
+    postconditions:
+    - creation_time is set to now as 'YYYY-MM-DD HH:MM:SS'
+    - task is persisted
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: save_tasks
+    operation_name: save_tasks
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Convert schema activities to ActionItems, build a Task, store it by id (overwrites silently;
+    duplicate checking is the router's job), persist and return it.
+  prompt_template: ''
+  prompt: ''
+- id: get_task
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task_service
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_id
+      type:
+        type: integer
+    returns:
+      type: optional
+      of:
+        type: task
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Return the Task with this id, or None.
+  prompt_template: ''
+  prompt: ''
+- id: get_all_tasks
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task_service
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: list
+      items:
+        type: task
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Return all tasks.
+  prompt_template: ''
+  prompt: ''
+- id: update_task
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task_service
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_id
+      type:
+        type: integer
+    - name: task_data
+      type:
+        type: task_update_schema
+    returns:
+      type: optional
+      of:
+        type: task
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: save_tasks
+    operation_name: save_tasks
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Return None if missing. Otherwise apply each non-null field; a non-null activities list replaces
+    the existing list wholesale. Persist and return the Task.
+  prompt_template: ''
+  prompt: ''
+- id: delete_task
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task_service
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_id
+      type:
+        type: integer
+    returns:
+      type: boolean
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: save_tasks
+    operation_name: save_tasks
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Remove and persist; True if it existed, else False.
+  prompt_template: ''
+  prompt: ''
+- id: save_tasks
+  title: ''
+  status: implemented
+  boundary: null
+  parent: task_service
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns: &id001
+      type: none
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Write all tasks to server/task.json as a JSON object keyed by task id, creating the directory
+    if needed.
+  prompt_template: ''
+  prompt: ''
+- id: tasks_router
+  title: ''
+  status: implemented
+  boundary: null
+  parent: tasks
+  interface:
+    protocol: module
+    exports:
+    - router
+    layout: file
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_schemas
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: APIRouter(prefix='/tasks', tags=['tasks']) with a module-level TaskService instance. A private
+    helper converts a Task (and its ActionItems) into task_response_schema; every endpoint that returns
+    a task uses it.
+  prompt_template: ''
+  prompt: ''
+- id: create_task_endpoint
+  title: ''
+  status: implemented
+  boundary: null
+  parent: tasks_router
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_data
+      type:
+        type: task_create_schema
+    returns:
+      type: task_response_schema
+    http_method: POST
+    route: /tasks/
+    errors:
+    - code: '409'
+      description: Task with that ID already exists
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: get_task
+    operation_name: get_task
+  - node: create_task
+    operation_name: create_task
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Reject if get_task(id) exists, else create. Responds 201.
+  prompt_template: ''
+  prompt: ''
+- id: get_task_endpoint
+  title: ''
+  status: implemented
+  boundary: null
+  parent: tasks_router
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_id
+      type:
+        type: integer
+    returns:
+      type: task_response_schema
+    http_method: GET
+    route: /tasks/{task_id}
+    errors:
+    - code: '404'
+      description: Task not found
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: get_task
+    operation_name: get_task
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Return one task.
+  prompt_template: ''
+  prompt: ''
+- id: list_tasks_endpoint
+  title: ''
+  status: implemented
+  boundary: null
+  parent: tasks_router
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: list
+      items:
+        type: task_response_schema
+    http_method: GET
+    route: /tasks/
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: get_all_tasks
+    operation_name: get_all_tasks
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Return all tasks.
+  prompt_template: ''
+  prompt: ''
+- id: update_task_endpoint
+  title: ''
+  status: implemented
+  boundary: null
+  parent: tasks_router
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_id
+      type:
+        type: integer
+    - name: task_data
+      type:
+        type: task_update_schema
+    returns:
+      type: task_response_schema
+    http_method: PUT
+    route: /tasks/{task_id}
+    errors:
+    - code: '404'
+      description: Task not found
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: update_task
+    operation_name: update_task
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Partial update.
+  prompt_template: ''
+  prompt: ''
+- id: delete_task_endpoint
+  title: ''
+  status: implemented
+  boundary: null
+  parent: tasks_router
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: task_id
+      type:
+        type: integer
+    returns: *id001
+    http_method: DELETE
+    route: /tasks/{task_id}
+    errors:
+    - code: '404'
+      description: Task not found
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: delete_task
+    operation_name: delete_task
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Delete; responds 204 with no body.
+  prompt_template: ''
+  prompt: ''
