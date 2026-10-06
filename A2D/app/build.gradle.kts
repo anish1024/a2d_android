@@ -6,6 +6,16 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+import java.io.FileInputStream
+import java.util.Properties
+
+// 1. Load keystore.properties from the root project directory
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.a2d.app"
     compileSdk = 34
