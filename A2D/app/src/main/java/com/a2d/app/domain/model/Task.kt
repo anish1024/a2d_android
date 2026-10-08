@@ -22,6 +22,18 @@ data class Task(
     val isCompleted: Boolean
         get() = activities.isNotEmpty() && activities.all { it.achieved }
 
+    /**
+     * redesign02 progress rule:
+     * Percentage of achieved activities; 0 when the task has no activities.
+     */
+    val progressPercent: Int
+        get() = if (activities.isEmpty()) {
+            0
+        } else {
+            val completed = activities.count { it.achieved }
+            (completed * 100 / activities.size)
+        }
+
     override fun processActivity(callback: ((List<ActivityAchieved>) -> Boolean)?): Boolean {
         achieved = callback?.invoke(activities) ?: true
         return achieved

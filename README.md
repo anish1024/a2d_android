@@ -458,3 +458,26 @@ Full per-task progress reports are in `a2d_implementation_log.md` → *Redesign 
 - All delete operations (task-level and per-activity, in both list and detail views) require confirmation via `AlertDialog`.
 - Activities are never reordered — they always display in original ID order; new activities append at the end (globally unique monotonic IDs).
 - No inline expand/collapse of activity items; tapping a card navigates to the detail screen instead.
+
+---
+
+## 8. redesign02 — Editable & Collapsible Task Cards (Completed)
+
+Summary of tasks completed under the `redesign02.md` proposal (Task UI Redesign – Proposal 02).
+Per-task progress reports are in `a2d_implementation_log.md` → *Redesign 02* section. Builds on redesign01 (§7).
+
+| # | Task | Status | What was delivered |
+| --- | --- | --- | --- |
+| R2-T1 | Domain progress rule | ✅ | `Task.progressPercent` computed exactly per spec: `0` for empty tasks, else `(achievedCount * 100 / size)`; 4 new unit tests (0 / 25 / 66 / 100 %) — **15/15 tests pass** |
+| R2-T2 | `updateTask` operation | ✅ | `TaskViewModel.updateTask(taskId, newName, newDescription)` — trims both inputs, blank name falls back to the current name, no-op guard skips unchanged writes, persists via `task.copy(...)` + repository; `tasks`/`currentTask` flows re-emit from Room. All redesign01 operations retained |
+| R2-T3 | TaskListScreen rework | ✅ | Header: `[Edit] task name [x%] [×]` — edit button (`Edit`/`Done` toggle), progress % (`primary` at 100 % else `onSurfaceVariant`), delete ×. Collapsible body (per-task `mutableStateMapOf` keyed state, default expanded): header tap toggles, body tap opens Task Detail, edit mode shows name + description `OutlinedTextField`s with persistence on edit-button re-tap **or** focus loss (400 ms guard prevents exit/re-enter races; auto-expands + focuses name field on entry). `TaskCardHeader`/`TaskCardBody` decomposition per spec §8. `MainActivity` wired with `onSaveEdit` |
+| R2-T4 | Verification | ✅ | `./gradlew test` → **15/15 pass**; `./gradlew assembleDebug` → BUILD SUCCESSFUL (`app-debug.apk`, 10.4 MB). No Room schema changes |
+| R2-T5 | Documentation | ✅ | This README section + per-task entries in `a2d_implementation_log.md` |
+
+**Behavior notes**
+
+- **Progress %** appears in every task-card header, derived solely from activity checkboxes; `100%` renders green (`primary`).
+- **Collapse/expand:** tapping the header toggles only the body; the header (name, edit, %, delete) is always visible. Cards start expanded; state is kept per task id for the lifetime of the list screen.
+- **Editing:** only in the list view (spec §6 keeps the detail screen unchanged). Exiting edit mode — via the edit button, tapping outside the fields, or collapsing the header — always saves first through `updateTask`, so no keystrokes are lost.
+- **Tapping the body** opens the Task Detail screen (checkboxes, delete icons, buttons and edit fields consume their own taps); body navigation is disabled while editing to avoid accidental exits.
+- All redesign01 behaviors remain: confirmation dialogs for every delete, ID-ordered activities, strikethrough/fade done styling, detail-screen back button and completion badge.

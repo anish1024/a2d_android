@@ -440,3 +440,227 @@ untouched (debug build). No Kotlin compilation errors or warnings in the new UI 
 
 All 7 tasks complete. The redesign implements `redesign01.md` v1.0 in full; no Room schema changes were needed.
 Remaining manual step (unchanged from Sprint 4): deploy to a physical device with `./a2d_deploy.sh` once a phone is attached.
+
+---
+---
+
+# Redesign 02 — Task UI Iteration (`redesign02.md`) — Progress Log
+
+Proposal source: `redesign02.md` (editable task name/description, collapsible card bodies, header progress %).
+Planned tasks: R2-T1 progress domain rule → R2-T2 `updateTask` → R2-T3 TaskListScreen rework + wiring →
+R2-T4 verification → R2-T5 README section.
+
+## Redesign02 R2-T1 — Domain progress rule ✅
+
+**Status:** Complete — verified with `./gradlew test` (BUILD SUCCESSFUL, **15/15 tests pass**)
+
+| File | Change |
+| --- | --- |
+| `domain/model/Task.kt` | ➕ added `val progressPercent: Int` computed with the spec §1 snippet verbatim: `0` when `activities.isEmpty()`, else `(count { it.achieved } * 100 / activities.size)` (integer division). Sits alongside the redesign01 `isCompleted` property; no schema or ViewModel change needed for progress |
+| `test/.../TaskDomainTest.kt` | ➕ 4 new tests: `testProgressPercentZeroWhenNoActivities` (0), `testProgressPercentPartialCompletion` (1/4 → 25), `testProgressPercentTruncatesIntegerDivision` (2/3 → 66), `testProgressPercentHundredWhenAllAchieved` (100) |
+
+**Verification:** `./gradlew test` → BUILD SUCCESSFUL (2m 35s); reports:
+`TaskDomainTest` tests=9, `SerialAndGateProcessorTest` tests=4, `IntegratedGateTaskFlowTest` tests=2 — **0 failures, 0 errors**.
+
+## Redesign02 R2-T2 — `updateTask` ViewModel operation ✅
+
+**Status:** Complete — `ui/task/TaskViewModel.kt` updated per spec §1
+
+```kotlin
+fun updateTask(taskId: Long, newName: String, newDescription: String)
+```
+
+- **Validation/trim** (spec §1): both inputs `.trim()`; a blank name after trimming **falls back to the
+  current `taskName`** so a task can never be renamed to an empty string; description may legitimately be empty.
+- **No-op guard:** if both resolved values equal the stored ones, the coroutine returns without a Room write.
+- **Persistence:** reloads the task via `repository.getTask`, `task.copy(taskName = ..., description = ...)`
+  (activities/`achieved`/priority/context untouched), then `repository.saveTask(updated)`.
+- Room's `Flow` re-emits afterwards, so `tasks` / `currentTask` update the UI automatically (spec §1:
+  "Emits updated `tasks` flow"). Gate/pipeline recalculation intentionally skipped — name/description do not
+  affect Tier-1/Tier-2 evaluation.
+- Existing operations (`toggleActivity`, `addActivity`, `deleteActivity`, `deleteTask`, `createSampleTask`,
+  `selectTask`/`currentTask`) unchanged, as required by spec §1.
+
+## Redesign02 R2-T3 — TaskListScreen rework: header, collapsible body, inline edit ✅
+
+**Status:** Code complete — spec §2–§5 + §8 implemented; `ui/task/TaskListScreen.kt` rewritten, `MainActivity` wired.
+(Compile/runtime verification is R2-T4.)
+
+**Hoisted per-task UI state** (spec §8, `mutableStateMapOf` keyed by task id, placed at screen level so it
+survives `LazyColumn` item disposal):
+- `expandedStates` (default **expanded**), `editingStates` (default not editing).
+- Entering edit mode force-expands the body (fields live in the body); collapsing while editing first persists.
+
+**`TaskCard(task, isExpanded, isEditing, onHeaderClick, onEditingChange, onSaveEdit, onTaskBodyClick, ...)`:**
+| Element | Behavior |
+| --- | --- |
+| `TaskCardHeader` | Row per spec §5: `[Edit IconButton] [task name · titleMedium · weight(1f)] [progress%] [× delete IconButton]`. Header row `.clickable { onHeaderClick() }.padding(12.dp)` → toggles collapse; child edit/delete buttons consume their own taps (they are `focusProperties { canFocus = false }` so they can never steal focus from the edit fields). Edit icon switches `Edit` → `Done` while editing (spec §3 "changes state to indicate Done editing"). Progress colors per spec snippet: `primary` at 100 %, else `onSurfaceVariant` |
+| `TaskCardBody` | Shown only when expanded. **View mode:** optional description (non-blank) + activity `LazyColumn` (200 dp cap, shared `ActivityRow` with strikethrough/fade styling) + `+ Add activity` button; the body container is `.clickable { onBodyClick() }` → opens the Task Detail screen (interactive children — checkbox, delete icons, buttons — consume their own taps). **Edit mode:** two `OutlinedTextField`s ("Task name" single-line with `FocusRequester`, "Task description" 2–5 lines) + the same activity list/add button; body navigation is disabled while editing so taps in the fields can't trigger navigation |
+| Edit persistence | **Trigger A — edit button again:** calls `exitEditMode()` → `onSaveEdit(draftName, draftDescription)` + `onEditingChange(false)`. **Trigger B — focus lost:** `Modifier.onFocusChanged` on the edit-fields column; guarded by a `focusEntered` arm flag (ignores the initial attach event so entering edit mode can't self-dismiss), and on a real loss while editing it stamps `lastEditExitAt` then saves+exits. Field→field focus moves keep `hasFocus == true` → no premature save |
+| Race guard | A 400 ms `lastEditExitAt` window suppresses the edit button's *enter* branch if the same physical tap is what just cleared field focus (focus-lost path already handled it) — prevents exit-then-immediate-re-enter regardless of event ordering |
+| Drafts | `draftName`/`draftDescription` initialized from the task and reloaded in `LaunchedEffect(isEditing)` on every entry into edit mode; saved values go through `updateTask` (T2 trims/validates) |
+
+**Dialogs:** `TaskDeleteDialog` (via × in header) and `ActivityDeleteDialog` (via row delete icon) unchanged
+from redesign01 — spec §7 requires both to remain with confirmation.
+
+**`MainActivity.kt`:** list route gains `onSaveEdit = { taskId, name, desc -> taskVm.updateTask(...) }`.
+
+**Unchanged (per spec §6/§7/§9):** `TaskDetailScreen.kt`, delete behaviors, navigation graph
+(`taskDetail/{taskId}` already in place), Room schema (`TaskEntity` already stores `taskName`/`description`).
+
+## Redesign02 R2-T4 — Verification ✅
+
+**Status:** Complete — both spec verification commands green
+
+```
+$ ./gradlew test
+BUILD SUCCESSFUL in 1m 22s   (61 actionable tasks)
+→ 15/15 unit tests pass — TaskDomainTest 9 (4 new progressPercent tests), 
+  SerialAndGateProcessorTest 4, IntegratedGateTaskFlowTest 2; 0 failures, 0 errors
+
+$ ./gradlew assembleDebug
+BUILD SUCCESSFUL in 24s   (41 actionable tasks)
+→ A2D/app/build/outputs/apk/debug/app-debug.apk (10,376,810 bytes, Oct 8 17:36)
+```
+
+- The reworked `TaskListScreen.kt` (focus handling, `FocusRequester`, `focusProperties`, `mutableStateMapOf`,
+  edit fields) and `updateTask` compile clean on both debug and release variants — no Kotlin errors/warnings.
+- No Room schema migration needed (spec §9); KSP/Hilt regenerated without issues.
+- Note: `Icons.Filled.Done`/`Edit` resolved from `material-icons-core` (added in redesign01).
+
+**Files changed by redesign02:**
+- ✏️ `domain/model/Task.kt` (+`progressPercent`)
+- ✏️ `ui/task/TaskViewModel.kt` (+`updateTask`)
+- ✏️ `ui/task/TaskListScreen.kt` (header/collapse/edit rework: `TaskCardHeader`, `TaskCardBody` split per spec §8)
+- ✏️ `ui/MainActivity.kt` (+`onSaveEdit` wiring)
+- ✏️ `test/.../TaskDomainTest.kt` (+4 progress tests)
+- ⏭️ `TaskDetailScreen.kt`, navigation graph, Room schema: **unchanged** (spec §6/§7/§9)
+
+## Redesign02 R2-T5 — README.md updated ✅
+
+**Status:** Complete
+
+- Appended **`## 8. redesign02 — Editable & Collapsible Task Cards (Completed)`** to `README.md` (line 464).
+- Contains the R2-T1…R2-T5 summary table with statuses and deliverables, plus behavior notes
+  (progress %, collapse semantics, edit persistence triggers, body-tap navigation, preserved redesign01 behaviors).
+
+---
+
+## Redesign02 — Overall Result
+
+| Task | Result |
+| --- | --- |
+| R2-T1 `Task.progressPercent` + 4 tests | ✅ `./gradlew test` green (15/15) |
+| R2-T2 `updateTask(taskId, newName, newDescription)` | ✅ trim/validation/no-op guard |
+| R2-T3 TaskListScreen header/collapse/inline-edit + MainActivity wiring | ✅ spec §2–§5, §8 |
+| R2-T4 Verification (`test` + `assembleDebug`) | ✅ BUILD SUCCESSFUL, `app-debug.apk` 10,376,810 bytes |
+| R2-T5 README `redesign02` section | ✅ §8 appended |
+
+All 5 tasks complete. `redesign02.md` implemented in full; no Room schema changes, no changes to
+`TaskDetailScreen`, navigation routes, or delete-confirmation behavior (as specified). Both redesigns
+(redesign01 + redesign02) verified in the same build. Remaining manual step: deploy to a physical
+device with `./a2d_deploy.sh` once a phone is attached.
+
+---
+
+## Bugfix B1 (redesign02 issues) — F1: Task edit focus/exit mechanics reworked ✅
+
+**Status:** Complete
+
+**Bugs addressed:**
+1. Task name/description editing only worked the first time.
+2. Tapping the description field closed edit mode even on the first attempt.
+
+**Root causes identified:**
+- *Bug 2:* `onFocusChanged` was attached to the parent edit-fields `Column`, so the transient
+  `hasFocus = false` during a name → description focus transfer was treated as a real focus loss
+  and immediately saved + exited edit mode.
+- *Bug 1:* every tap on the edit button while a field was focused first cleared field focus
+  (focus-loss path exited edit mode and stamped `lastEditExitAt`), then the button's `onClick`
+  fired and was swallowed by the 400 ms `justExitedByFocus` guard — so subsequent taps looked
+  dead ("works only the first time").
+
+**Fix (`ui/task/TaskListScreen.kt`):**
+- Per-field focus tracking: `nameFocused` / `descFocused` booleans, `onFocusChanged` moved from
+  the parent `Column` onto each `OutlinedTextField`; `focusArmed` gates auto-exit until a field
+  has actually gained focus once after entering edit mode.
+- Deferred exit: `LaunchedEffect(isEditing, focusArmed, nameFocused, descFocused)` waits two
+  frames (`withFrameNanos` × 2) before re-checking — a focus transfer cancels/restarts it, so
+  only a genuine focus loss saves + exits. All re-checks read live snapshot state via
+  `rememberUpdatedState` (`currentIsEditing`, `currentOnSaveEdit`, `currentOnEditingChange`).
+- Edit button is now the single authoritative toggle: `IconButton(onClick = {})` +
+  `MutableInteractionSource` collecting `PressInteraction.Press` (fires at touch-down, before any
+  deferred focus-loss commit) with `rememberUpdatedState` to avoid stale closures.
+- Removed the 400 ms `lastEditExitAt` guard and `focusEntered` flag entirely.
+
+**Verified:** `./gradlew compileDebugKotlin` — BUILD SUCCESSFUL.
+
+## Bugfix B1 (redesign02 issues) — F2: `updateActivity` ViewModel operation ✅
+
+**Status:** Complete
+
+- Added `TaskViewModel.updateActivity(taskId, activityId, newDescription)` mirroring the
+  `updateTask` validation pattern: trims input, blank description falls back to the existing
+  value, no-op guard skips identical writes.
+- Achievement flags are untouched by a description edit, so no `processActivityWithGate` /
+  `recalculatePipeline` call is needed (progress is derived from `achieved`, not text).
+- **File:** `ui/task/TaskViewModel.kt` — compile verified (`compileDebugKotlin` green).
+
+## Bugfix B1 (redesign02 issues) — F3: Activity description inline editing ✅
+
+**Status:** Complete — bug 3 (no edit provision for activity descriptions) fixed in both
+the task list cards and the task detail screen.
+
+**`TaskViewModel`:** (F2, above) `updateActivity(taskId, activityId, newDescription)`.
+
+**`ui/task/TaskListScreen.kt`:**
+- `ActivityRow` reworked: checkbox + `Text`/`OutlinedTextField` swap + edit toggle icon
+  (`Edit` ⇄ `Done`) + delete icon. Field is single-line with IME `Done` action
+  (`KeyboardOptions`/`KeyboardActions` → `onCommitEdit`).
+- Edit toggle is press-based (`MutableInteractionSource` + `PressInteraction.Press` with
+  `rememberUpdatedState`) so the commit always wins the race against the deferred
+  focus-loss commit — same pattern as the task edit button (no enter/exit double-toggle).
+- Editing state hoisted to `TaskCard` (`editingActivityId`, `activityDraft`,
+  `activityFieldFocused`, `activityFocusArmed`, shared `FocusRequester`) so it survives the
+  inner activity `LazyColumn` disposing rows on scroll. Auto-focus on entry via
+  `runCatching { requestFocus() }` (guards the row-not-composed race).
+- Commit triggers: edit-icon re-tap (press), IME Done, deferred focus loss (2-frame re-check,
+  mirrors F1), header collapse, body tap (navigate), starting another row's edit,
+  entering task edit mode (mutual exclusion via `commitActivityEdit()`), activity delete
+  of the row being edited (state cleared; VM no-op guards stale ids).
+- `TaskListScreen` gained `onUpdateActivity: (Long, Long, String) -> Unit`.
+
+**`ui/task/TaskDetailScreen.kt`:**
+- Same hoisted activity-edit state, focus/deferred-commit effects, and `ActivityRow` wiring.
+- Gained `onUpdateActivity: (Long, Long, String) -> Unit` param.
+
+**`ui/MainActivity.kt`:** wired `onUpdateActivity` → `taskVm.updateActivity(...)` for both
+the `taskList` and `taskDetail/{taskId}` routes.
+
+**Verified:** `./gradlew compileDebugKotlin` green.
+
+## Bugfix B1 (redesign02 issues) — F4: Verification ✅
+
+**Status:** Complete
+
+```
+./gradlew test           → BUILD SUCCESSFUL (15/15 unit tests: TaskDomainTest 9,
+                            SerialAndGateProcessorTest 4, IntegratedGateTaskFlowTest 2;
+                            0 failures, 0 errors)
+./gradlew assembleDebug  → BUILD SUCCESSFUL
+                           app/build/outputs/apk/debug/app-debug.apk (10,433,734 bytes)
+```
+
+---
+
+## Bugfix B1 (redesign02 issues) — Overall Result
+
+| Task | Result |
+| --- | --- |
+| F1 task edit focus/exit rework (per-field focus, 2-frame deferred exit, press-based toggle, 400 ms guard removed) | ✅ compiles; fixes bugs 1 & 2 |
+| F2 `TaskViewModel.updateActivity` | ✅ trim/blank-fallback/no-op guard |
+| F3 activity description inline editing (list + detail + MainActivity wiring) | ✅ fixes bug 3 |
+| F4 verification (`test` + `assembleDebug`) | ✅ 15/15 green, APK built |
+
+All 3 reported bugs fixed. Remaining manual step: deploy to a physical device with
+`./a2d_deploy.sh` (no device attached) and re-test editing flows on-device.
