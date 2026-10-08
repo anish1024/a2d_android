@@ -37,4 +37,45 @@ class TaskDomainTest {
         assertFalse(completed)
         assertFalse(task.achieved)
     }
+
+    @Test
+    fun testIsCompletedFalseWhenNoActivities() {
+        val task = Task(
+            id = 3L,
+            taskName = "Empty",
+            description = "Desc",
+            priority = 1
+        )
+        assertFalse(task.isCompleted)
+    }
+
+    @Test
+    fun testIsCompletedFalseWhenAnyActivityUnchecked() {
+        val task = Task(
+            id = 4L,
+            taskName = "Partial",
+            description = "Desc",
+            priority = 1,
+            activities = listOf(
+                ActionItem(1L, "Done", achieved = true),
+                ActionItem(2L, "Todo", achieved = false)
+            )
+        )
+        assertFalse(task.isCompleted)
+    }
+
+    @Test
+    fun testIsCompletedTrueWhenAllActivitiesAchieved() {
+        val task = Task(
+            id = 5L,
+            taskName = "All done",
+            description = "Desc",
+            priority = 1,
+            activities = listOf(
+                ActionItem(1L, "A", achieved = true),
+                ActionItem(2L, "B", achieved = true)
+            )
+        )
+        assertTrue(task.isCompleted)
+    }
 }

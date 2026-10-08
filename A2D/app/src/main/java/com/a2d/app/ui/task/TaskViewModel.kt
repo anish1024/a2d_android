@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,8 +27,18 @@ class TaskViewModel @Inject constructor(
     val tasks: StateFlow<List<Task>> = repository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val selectedTaskId = MutableStateFlow<Long?>(null)
+
+    val currentTask: StateFlow<Task?> = combine(tasks, selectedTaskId) { list, id ->
+        list.find { it.id == id }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     private val _milestoneOutput = MutableStateFlow(0)
     val milestoneOutput: StateFlow<Int> = _milestoneOutput.asStateFlow()
+
+    fun selectTask(taskId: Long) {
+        selectedTaskId.value = taskId
+    }
 
     fun createSampleTask(id: Long, name: String, priority: Int) {
         viewModelScope.launch {
@@ -47,12 +58,12 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun toggleActionItem(task: Task, actionId: Long) {
+    fun toggleActivity(taskId: Long, activityId: Long, achieved: Boolean) {
         viewModelScope.launch {
-            val updated = task.activities.map {
-                if (it.id == actionId) it.copy(achieved = !it.achieved) else it
+            val task = repository.getTask(taskId) ?: return@launch
+            task.activities = task.activities.map {
+                if (it.id == activityId) it.copy(achieved = achieved) else it
             }
-            task.activities = updated
 
             // Tier 1: Process Task Gate
             task.processActivityWithGate(gateProcessor)
@@ -63,9 +74,38 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun deleteTask(id: Long) {
+    fun addActivity(taskId: Long) {
         viewModelScope.launch {
-            repository.deleteTask(id)
+            val task = repository.getTask(taskId) ?: return@launch
+            val maxExistingId = tasks.value
+                .flatMap { it.activities }
+                .maxOfOrNull { it.id } ?: 0L
+            val newId = maxOf(maxExistingId, taskId * 10) + 1
+            task.activities = task.activities + ActionItem(
+                id = newId,
+                description = "New activity"
+            )
+
+            task.processActivityWithGate(gateProcessor)
+            repository.saveTask(task)
+            recalculatePipeline()
+        }
+    }
+
+    fun deleteActivity(taskId: Long, activityId: Long) {
+        viewModelScope.launch {
+            val task = repository.getTask(taskId) ?: return@launch
+            task.activities = task.activities.filterNot { it.id == activityId }
+
+            task.processActivityWithGate(gateProcessor)
+            repository.saveTask(task)
+            recalculatePipeline()
+        }
+    }
+
+    fun deleteTask(taskId: Long) {
+        viewModelScope.launch {
+            repository.deleteTask(taskId)
             recalculatePipeline()
         }
     }

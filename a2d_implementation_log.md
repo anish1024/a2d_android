@@ -298,3 +298,145 @@ Pipeline confirmed: `validateSigningRelease` → `minifyReleaseWithR8` → `shri
 | 4 — Deploy & release | 4.1, 4.2, 4.3 | ⚠️ 1/3 — 4.2 ✅ signed `app-release.aab` (2.68 MB, R8 + shrinking); 4.1 & 4.3 blocked on physical device / Play Console (manual) |
 
 **Final state:** all 31 spec source files implemented 1:1 under `A2D/`, all three verification commands green, debug APK + signed production AAB built. Remaining work is device onboarding (`./a2d_deploy.sh`) and the Play Console submission.
+
+---
+---
+
+# Redesign 01 — Task Card Redesign (`redesign01.md`) — Progress Log
+
+Proposal source: `redesign01.md` (Task Card Redesign Specification v1.0).
+Planned tasks: T1 domain completion rule → T2 ViewModel operations → T3 navigation →
+T4 TaskListScreen → T5 TaskDetailScreen → T6 verification → T7 README update.
+
+## Redesign T1 — Domain completion rule & ID ordering ✅
+
+**Status:** Complete — verified with `./gradlew test` (BUILD SUCCESSFUL, **11/11 tests pass**)
+
+**Changes:**
+| File | Change |
+| --- | --- |
+| `domain/model/Task.kt` | ➕ added computed property `val isCompleted` implementing the spec rule `activities.isNotEmpty() && activities.all { it.achieved }`. Kept separate from the Tier-1 gate flag `achieved` (gate treats an empty task as achieved; the redesign rule requires ≥1 activity — both behaviors are now available: `isCompleted` for UI, `achieved` for the gate pipeline) |
+| `data/repository/TaskRepositoryImpl.kt` | ➕ `.sortedBy { it.id }` added to activity mapping in `getAllTasks()`, `getTaskSnapshot()` and `getTask()` — guarantees the spec's "original order by ID" display order regardless of SQLite row order |
+| `test/.../TaskDomainTest.kt` | ➕ 3 new tests: `testIsCompletedFalseWhenNoActivities`, `testIsCompletedFalseWhenAnyActivityUnchecked`, `testIsCompletedTrueWhenAllActivitiesAchieved` |
+
+**Verification:** `./gradlew test` → BUILD SUCCESSFUL (5m 35s); reports show
+`TaskDomainTest` tests=5, `SerialAndGateProcessorTest` tests=4, `IntegratedGateTaskFlowTest` tests=2 — **0 failures, 0 errors**.
+
+## Redesign T2 — TaskViewModel operations ✅
+
+**Status:** Complete — `A2D/app/src/main/java/com/a2d/app/ui/task/TaskViewModel.kt` updated per spec §1 & §6
+
+**Exposed state:**
+- `tasks: StateFlow<List<Task>>` — unchanged (Room flow, `WhileSubscribed(5000)`).
+- `currentTask: StateFlow<Task?>` — ➕ `combine(tasks, selectedTaskId) { list, id -> list.find { it.id == id } }`, initial `null`, `WhileSubscribed(5000)` exactly as the spec's derived-state pattern (implemented in the shared ViewModel rather than the composable so all mutations/state stay out of the UI layer).
+- `selectTask(taskId: Long)` — ➕ sets the id consumed by `currentTask` (called by the detail screen).
+
+**Operations (all Room-backed, all re-emit `tasks`/`currentTask`, all re-run the Tier-1 gate + Tier-2 pipeline):**
+| Operation | Status | Behavior |
+| --- | --- | --- |
+| `toggleActivity(taskId, activityId, achieved)` | ➕ new (replaces `toggleActionItem(task, actionId)`) | reloads task from Room, sets the exact new `achieved` value, gate-recomputes, saves |
+| `addActivity(taskId)` | ➕ new | appends `ActionItem(newId, "New activity")`; id = `max(globalMaxActivityId, taskId*10) + 1` → strictly greater than every existing id, so it is globally unique (Room PK) and sorts to the end of the ID-ordered list |
+| `deleteActivity(taskId, activityId)` | ➕ new | filters the item out, gate-recomputes, saves |
+| `deleteTask(taskId)` | ✅ kept (spec signature) | deletes task (CASCADE removes activities), recalculates pipeline |
+| `createSampleTask(id, name, priority)` | ✅ kept | retains the existing "+ Task" affordance (spec doesn't define task creation; removing it would strand the user) |
+
+No sorting/reordering logic added anywhere — display order remains natural ID order (T1).
+
+## Redesign T3 — Jetpack Navigation setup ✅
+
+**Status:** Complete — spec §5 routes implemented in `ui/MainActivity.kt` + new dependencies
+
+**Dependencies added** (`gradle/libs.versions.toml`, `app/build.gradle.kts`):
+- `androidx.navigation:navigation-compose:2.8.2` — spec's `navController.navigate("taskDetail/$taskId")` / `navigateUp()` navigation.
+- `androidx.compose.material:material-icons-core` (BOM-managed) — `Icons.Filled.Delete` / `Add` / `ArrowBack` used by the redesign's delete icons, add-activity button and back button (not transitively provided by material3).
+
+**`MainActivity.kt` rewrite:**
+- `rememberNavController()` + `NavHost(startDestination = "taskList")` inside the existing `Scaffold`, so `innerPadding` still clears the bottom bar.
+- Routes per spec: `taskList` → `TaskListScreen`, `taskDetail/{taskId}` → `TaskDetailScreen` with `navArgument("taskId") { type = NavType.LongType }`, plus `logicGate` (pre-existing tab retained).
+- Bottom `NavigationBar` kept from the original app: **Tasks** / **Logic Gate**; tab selection derived from `currentBackStackEntryAsState` route, and the Tasks tab stays selected while on `taskDetail/{taskId}`. Tab switches use `popUpTo(saveState) + launchSingleTop + restoreState`.
+- Detail route loads `currentTask` from `TaskViewModel` and calls `selectTask(taskId)` in a `LaunchedEffect`; `onDeleteTask` deletes **and** `navigateUp()`s back to the list (spec §4).
+- `TaskScreen`'s old inline wiring replaced: the list route receives `onTaskClick`/`onToggleActivity`/`onAddActivity`/`onDeleteActivity`/`onDeleteTask`/`onCreateSample`.
+
+## Redesign T4 — TaskListScreen (compact cards) ✅
+
+**Status:** Complete — spec §2 & §4 implemented; `TaskScreen.kt` removed (refactor target per spec §7)
+
+**New file: `ui/task/TaskListScreen.kt`** containing:
+
+| Component | Spec conformance |
+| --- | --- |
+| `TaskListScreen(...)` | `LazyColumn` of compact `TaskCard`s (keyed by task id). Retains the app's header: `A2D Focus Tasks` + `Milestone Complete/Incomplete [GATE n]` status + `+ Task` button (task creation isn't covered by the redesign spec — kept so users can still create tasks). Maps each card to `taskId`-scoped callbacks so composables never touch the ViewModel directly (spec §6 state handling) |
+| `TaskCard(task, onTaskClick, onToggleActivity, onAddActivity, onDeleteActivity, onDeleteTask)` | `ElevatedCard(onClick = onTaskClick)` — whole card body is tappable to open detail; inner controls (checkbox, icon buttons) consume their own clicks so they don't trigger navigation. Header row: **×** delete `IconButton` (red tint) + title + optional description. Activity `LazyColumn` capped with `heightIn(max = 200.dp)` for internal scrolling per spec. `+ Add activity` `Button` (with `Add` icon) below the list |
+| `ActivityRow(activity, onCheckedChange, onDelete)` | Checkbox bound to `activity.achieved`; description styled with the **exact** snippet from spec §2 (bodyLarge, `onSurfaceVariant.copy(alpha = 0.6f)` + `TextDecoration.LineThrough` when done, `onSurface` otherwise); delete `Icons.Filled.Delete` icon on the right. Declared public/shared — reused unchanged by `TaskDetailScreen` (spec §6: "shared or duplicated") |
+| `TaskDeleteDialog` | `AlertDialog`: "Delete task?" / "This will delete the task and all of its activities." / Cancel + red **Delete** (spec §4) |
+| `ActivityDeleteDialog` | `AlertDialog`: "Delete activity?" / "This will remove this activity from the task." / Cancel + red **Delete** (spec §4) |
+
+- Per-card dialog state (`showTaskDeleteDialog`, `pendingActivityDeleteId`) lives inside `TaskCard`, so only the tapped card shows a dialog.
+- Empty state: activity `LazyColumn` simply renders with 0 items, `Add activity` still visible, no hint text (spec §2).
+
+**Removed:** `ui/task/TaskScreen.kt` (old single-screen layout; replaced by list + detail).
+
+## Redesign T5 — TaskDetailScreen (full-screen) ✅
+
+**Status:** Complete — spec §3 implemented; `ui/task/TaskDetailScreen.kt` created
+
+| Element | Implementation |
+| --- | --- |
+| Navigation / back | `IconButton(Icons.AutoMirrored.Filled.ArrowBack)` wired to `onNavigateBack()` → `navController.navigateUp()` (spec §3). Route already receives `taskId: Long` (LongType arg) |
+| Header (`TaskDetailHeader`) | Title (`headlineSmall`) + optional description + completion badge: exact spec §3 formula (`isCompleted = activities.isNotEmpty() && all achieved` → domain `Task.isCompleted`), `statusText` "Completed"/"In progress", `statusColor` `primaryContainer.copy(alpha=0.8f)` vs `surfaceVariant`, rendered as a pill `Surface(RoundedCornerShape(50))` badge |
+| Activity list | `LazyColumn` with `weight(1f)` (fills remaining full-screen space — no max-height cap needed here), ID order, shared `ActivityRow` (identical checkbox/strikethrough/delete styling as the list screen, spec §3 "styling is identical") |
+| Task delete | `Icons.Filled.Delete` in the top bar → `TaskDeleteDialog` → confirm calls `onDeleteTask(taskId)`; `MainActivity` then deletes **and navigates back** to the list (spec §4: "navigate back to the task list after deletion") |
+| Add activity | `Button` with `+` icon, label "Add activity", placed **below** the list; renders below the (empty) `LazyColumn` when there are no activities, no hint text (spec §3) |
+| Activity delete | Per-row delete icon → `ActivityDeleteDialog` → `deleteActivity(taskId, activityId)` |
+| Loading/missing state | While `currentTask` is still `null` (Room has not emitted yet), shows a centered `CircularProgressIndicator` |
+
+## Redesign T6 — Verification ✅ (redesign build: tests + APK both green)
+
+**Status:** Complete
+
+```
+$ ./gradlew test
+BUILD SUCCESSFUL in 8m 24s   (61 actionable tasks)
+→ 11/11 unit tests pass (TaskDomainTest 5, SerialAndGateProcessorTest 4, IntegratedGateTaskFlowTest 2)
+  0 failures, 0 errors — includes the 3 new isCompleted tests from T1
+
+$ ./gradlew assembleDebug
+BUILD SUCCESSFUL in 3m 54s   (41 actionable tasks)
+→ A2D/app/build/outputs/apk/debug/app-debug.apk (10,341,967 bytes, Oct 8 13:16)
+```
+
+Compiles clean end-to-end: new navigation dependency resolves, KSP/Hilt regenerate the graph for the new
+`NavHost` entry points, Room schema unchanged (spec §7: "No Room schema changes are required"), and R8 is
+untouched (debug build). No Kotlin compilation errors or warnings in the new UI files.
+
+**Files changed by the redesign (final inventory):**
+- ➕ `ui/task/TaskListScreen.kt`, ➕ `ui/task/TaskDetailScreen.kt`
+- ✏️ `ui/task/TaskViewModel.kt`, ✏️ `ui/MainActivity.kt`, ✏️ `domain/model/Task.kt`,
+  ✏️ `data/repository/TaskRepositoryImpl.kt`, ✏️ `test/.../TaskDomainTest.kt`,
+  ✏️ `gradle/libs.versions.toml`, ✏️ `app/build.gradle.kts`
+- 🗑️ `ui/task/TaskScreen.kt` (refactored into the two new screens)
+
+## Redesign T7 — README.md updated ✅
+
+**Status:** Complete
+
+- Appended **`## 7. redesign01 — Task Card Redesign (Completed)`** to `README.md` (line 440).
+- Contains the per-task summary table (T1–T7 with status + deliverables) and the behavior notes
+  (completion rule, mandatory confirmation dialogs, ID ordering, no expand/collapse).
+
+---
+
+## Redesign 01 — Overall Result
+
+| Task | Result |
+| --- | --- |
+| T1 Domain completion rule + ID ordering + tests | ✅ `./gradlew test` green (11/11) |
+| T2 TaskViewModel operations + `currentTask` | ✅ spec §1 operations all present |
+| T3 Jetpack Navigation (`taskList` / `taskDetail/{taskId}` / `logicGate`) | ✅ |
+| T4 `TaskListScreen` + `TaskCard` + `ActivityRow` + dialogs (old `TaskScreen` removed) | ✅ |
+| T5 `TaskDetailScreen` (back, badge header, list, dialogs, add activity) | ✅ |
+| T6 Verification (`test` + `assembleDebug`) | ✅ BUILD SUCCESSFUL, `app-debug.apk` 10,341,967 bytes |
+| T7 README `redesign01` section | ✅ |
+
+All 7 tasks complete. The redesign implements `redesign01.md` v1.0 in full; no Room schema changes were needed.
+Remaining manual step (unchanged from Sprint 4): deploy to a physical device with `./a2d_deploy.sh` once a phone is attached.
