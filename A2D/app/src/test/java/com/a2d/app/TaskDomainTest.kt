@@ -78,4 +78,63 @@ class TaskDomainTest {
         )
         assertTrue(task.isCompleted)
     }
+
+    @Test
+    fun testProgressPercentZeroWhenNoActivities() {
+        val task = Task(
+            id = 6L,
+            taskName = "Empty progress",
+            description = "Desc",
+            priority = 1
+        )
+        assertEquals(0, task.progressPercent)
+    }
+
+    @Test
+    fun testProgressPercentPartialCompletion() {
+        val task = Task(
+            id = 7L,
+            taskName = "Quarter done",
+            description = "Desc",
+            priority = 1,
+            activities = listOf(
+                ActionItem(1L, "A", achieved = true),
+                ActionItem(2L, "B", achieved = false),
+                ActionItem(3L, "C", achieved = false),
+                ActionItem(4L, "D", achieved = false)
+            )
+        )
+        assertEquals(25, task.progressPercent)
+    }
+
+    @Test
+    fun testProgressPercentTruncatesIntegerDivision() {
+        val task = Task(
+            id = 8L,
+            taskName = "Two thirds",
+            description = "Desc",
+            priority = 1,
+            activities = listOf(
+                ActionItem(1L, "A", achieved = true),
+                ActionItem(2L, "B", achieved = true),
+                ActionItem(3L, "C", achieved = false)
+            )
+        )
+        assertEquals(66, task.progressPercent)
+    }
+
+    @Test
+    fun testProgressPercentHundredWhenAllAchieved() {
+        val task = Task(
+            id = 9L,
+            taskName = "All done",
+            description = "Desc",
+            priority = 1,
+            activities = listOf(
+                ActionItem(1L, "A", achieved = true),
+                ActionItem(2L, "B", achieved = true)
+            )
+        )
+        assertEquals(100, task.progressPercent)
+    }
 }

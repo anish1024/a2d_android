@@ -103,6 +103,47 @@ class TaskViewModel @Inject constructor(
         }
     }
 
+    fun updateTask(taskId: Long, newName: String, newDescription: String) {
+        viewModelScope.launch {
+            val task = repository.getTask(taskId) ?: return@launch
+
+            // Validation: trim both inputs; a blank name falls back to the current name.
+            val trimmedName = newName.trim()
+            val trimmedDescription = newDescription.trim()
+            val finalName = trimmedName.ifBlank { task.taskName }
+
+            if (finalName == task.taskName && trimmedDescription == task.description) {
+                return@launch // nothing changed — skip the write
+            }
+
+            val updated = task.copy(
+                taskName = finalName,
+                description = trimmedDescription
+            )
+            repository.saveTask(updated)
+        }
+    }
+
+    fun updateActivity(taskId: Long, activityId: Long, newDescription: String) {
+        viewModelScope.launch {
+            val task = repository.getTask(taskId) ?: return@launch
+            val current = task.activities.find { it.id == activityId } ?: return@launch
+
+            // Validation: trim input; a blank description falls back to the current one.
+            val finalDescription = newDescription.trim().ifBlank { current.description }
+
+            if (finalDescription == current.description) {
+                return@launch // nothing changed — skip the write
+            }
+
+            task.activities = task.activities.map {
+                if (it.id == activityId) it.copy(description = finalDescription) else it
+            }
+            // Description text does not affect achievement, so no gate/pipeline recalculation.
+            repository.saveTask(task)
+        }
+    }
+
     fun deleteTask(taskId: Long) {
         viewModelScope.launch {
             repository.deleteTask(taskId)
