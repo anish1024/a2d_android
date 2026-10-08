@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,10 +9,8 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-import java.io.FileInputStream
-import java.util.Properties
-
 // 1. Load keystore.properties from the root project directory
+// (anchored with rootProject.file(...) per audit.md finding #1)
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -25,18 +26,35 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = rootProject.file(keystoreProperties.getProperty("KEYSTORE_PATH"))
+                storePassword = keystoreProperties.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = keystoreProperties.getProperty("KEY_ALIAS")
+                keyPassword = keystoreProperties.getProperty("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            isMinifyEnabled = false
         }
     }
     compileOptions {
@@ -48,6 +66,12 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -77,6 +101,7 @@ dependencies {
     implementation(libs.coroutines.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

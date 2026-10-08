@@ -1,3 +1,4 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.kts.
+# Maintain models and entities for reflection and Room
+-keep class com.a2d.app.domain.model.** { *; }
+-keep class com.a2d.app.data.local.entity.** { *; }
+-keep class com.a2d.app.data.local.relation.** { *; }

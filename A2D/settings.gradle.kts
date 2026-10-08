@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "A2D"
+rootProject.name = "A2DApp"
 include(":app")

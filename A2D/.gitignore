@@ -6,3 +6,7 @@ local.properties
 *.iml
 captures/
 .cxx/
+
+# Signing secrets (spec: keystore.properties is git-ignored)
+keystore.properties
+*.jks
