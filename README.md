@@ -435,3 +435,26 @@ Sprint 4: Hardware Deployment & Testing
  └── Profile memory and coroutine dispatchers to ensure zero main-thread hitching
 
 ```
+---
+
+## 7. redesign01 — Task Card Redesign (Completed)
+
+Summary of tasks completed under the `redesign01.md` specification (Task Card Redesign v1.0).
+Full per-task progress reports are in `a2d_implementation_log.md` → *Redesign 01* section.
+
+| # | Task | Status | What was delivered |
+| --- | --- | --- | --- |
+| T1 | Domain completion rule & ID ordering | ✅ | `Task.isCompleted` = `activities.isNotEmpty() && activities.all { it.achieved }`; `TaskRepositoryImpl` maps activities with `.sortedBy { it.id }` (all 3 query methods) so items always render in ID order; 3 new unit tests in `TaskDomainTest` |
+| T2 | ViewModel operations | ✅ | `TaskViewModel` now exposes `tasks`, `currentTask: StateFlow<Task?>` (derived via `combine(tasks, selectedTaskId)`), `selectTask(taskId)`, and the spec operations `toggleActivity(taskId, activityId, achieved)`, `addActivity(taskId)`, `deleteActivity(taskId, activityId)`, `deleteTask(taskId)` — all Room-backed with Tier-1 gate re-evaluation and Tier-2 pipeline recalculation |
+| T3 | Jetpack Navigation | ✅ | Added `androidx.navigation:navigation-compose:2.8.2` (+ `material-icons-core`); `MainActivity` now hosts a `NavHost` with routes `taskList`, `taskDetail/{taskId}` (Long arg) and `logicGate`; bottom tabs retained, Tasks tab stays active on the detail route |
+| T4 | TaskListScreen | ✅ | Compact `ElevatedCard` per task: × task-delete in header, optional description, checkbox activity list (strikethrough + 60 % fade when done), per-activity 🗑 delete, `+ Add activity` button; activity list capped at 200 dp for internal scrolling; card body taps open the detail screen; both deletes use confirmation `AlertDialog`s. Replaces the old `TaskScreen.kt` (removed) |
+| T5 | TaskDetailScreen | ✅ | Full-screen view: back arrow (`navigateUp()`), task header with green "Completed" / neutral "In progress" badge pill, full activity list with shared `ActivityRow`, task-delete button in the top bar (confirm → delete + navigate back), `+ Add activity` below the list, loading indicator while the task flow resolves |
+| T6 | Verification | ✅ | `./gradlew test` → **11/11 tests pass**; `./gradlew assembleDebug` → BUILD SUCCESSFUL (`app-debug.apk`, 10.3 MB). No Room schema changes required |
+| T7 | Documentation | ✅ | This README section + per-task entries in `a2d_implementation_log.md` |
+
+**Behavior notes**
+
+- Completion rule used everywhere in the UI: a task is completed only when it has **at least one** activity and **all** activities are checked (the empty task is *not* completed — distinct from the Tier-1 gate's `achieved` flag, which is kept for the milestone pipeline).
+- All delete operations (task-level and per-activity, in both list and detail views) require confirmation via `AlertDialog`.
+- Activities are never reordered — they always display in original ID order; new activities append at the end (globally unique monotonic IDs).
+- No inline expand/collapse of activity items; tapping a card navigates to the detail screen instead.

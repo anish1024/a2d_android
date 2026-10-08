@@ -14,6 +14,14 @@ data class Task(
     override var activities: List<ActionItem> = emptyList()
 ) : ActivityAchieved, ActivityProcessor {
 
+    /**
+     * redesign01 completion rule:
+     * A task is completed when it has at least one activity and all activities are achieved.
+     * (Distinct from the Tier-1 gate `achieved` flag, which treats an empty task as achieved.)
+     */
+    val isCompleted: Boolean
+        get() = activities.isNotEmpty() && activities.all { it.achieved }
+
     override fun processActivity(callback: ((List<ActivityAchieved>) -> Boolean)?): Boolean {
         achieved = callback?.invoke(activities) ?: true
         return achieved

@@ -28,9 +28,9 @@ class TaskRepositoryImpl @Inject constructor(
                     achieved = withItems.task.achieved,
                     context = withItems.task.context,
                     creationTime = withItems.task.creationTime,
-                    activities = withItems.actionItems.map {
-                        ActionItem(it.id, it.description, it.achieved)
-                    }
+                    activities = withItems.actionItems
+                        .sortedBy { it.id }
+                        .map { ActionItem(it.id, it.description, it.achieved) }
                 )
             }
         }
@@ -46,9 +46,9 @@ class TaskRepositoryImpl @Inject constructor(
                 achieved = withItems.task.achieved,
                 context = withItems.task.context,
                 creationTime = withItems.task.creationTime,
-                activities = withItems.actionItems.map {
-                    ActionItem(it.id, it.description, it.achieved)
-                }
+                activities = withItems.actionItems
+                    .sortedBy { it.id }
+                    .map { ActionItem(it.id, it.description, it.achieved) }
             )
         }
     }
@@ -63,7 +63,9 @@ class TaskRepositoryImpl @Inject constructor(
             achieved = record.task.achieved,
             context = record.task.context,
             creationTime = record.task.creationTime,
-            activities = record.actionItems.map { ActionItem(it.id, it.description, it.achieved) }
+            activities = record.actionItems
+                .sortedBy { it.id }
+                .map { ActionItem(it.id, it.description, it.achieved) }
         )
     }
 
