@@ -1,4 +1,4 @@
-# AGENTS.md — how to read and act on `graph.yaml`
+# Graph_Handbook.md — how to read and act on `graph.yaml`
 
 This file is for an agent (human or AI) that has been handed a `graph.yaml`
 and asked to generate, extend, or modify the codebase it describes. It is

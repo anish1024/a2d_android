@@ -1,0 +1,1956 @@
+project: a2d_android
+backbone: a2d
+default_boundary: module
+default_language: kotlin
+nodes:
+- id: a2d
+  title: A2D
+  status: implemented
+  boundary: null
+  parent: null
+  interface:
+    protocol: entrypoint
+    layout: folder
+  contract_version: 0.0.0
+  notes: Android application repository root. The implementation log states the Gradle project directory is A2D/
+    while the Gradle rootProject.name is A2DApp. All 31 spec source files are implemented. Latest log also records
+    redesign01, redesign02, and Bugfix B1 completion.
+  dependencies: []
+  calls: []
+  data_flows: []
+  prompt_template: ''
+  prompt: ''
+- id: android_runtime
+  title: Android Runtime
+  status: implemented
+  boundary: null
+  parent: a2d
+  interface:
+    protocol: gateway
+    transport: android
+    layout: skip
+  contract_version: 0.0.0
+  notes: Structural gateway required by the graph schema; the implementation log does not describe a separate network
+    or transport gateway.
+  dependencies: []
+  calls: []
+  data_flows: []
+  prompt_template: ''
+  prompt: ''
+- id: app
+  title: Android application
+  status: implemented
+  boundary: null
+  parent: android_runtime
+  interface:
+    protocol: service
+    language: kotlin
+    layout: folder
+  contract_version: 0.0.0
+  notes: Native Android application under A2D/app/src/main/java/com/a2d/app/, using Kotlin, Hilt, Room and Jetpack
+    Compose. Latest implementation includes Jetpack Navigation, editable/collapsible task cards, inline activity-description
+    editing, and the B1 focus/exit fixes.
+  dependencies: []
+  calls: []
+  data_flows: []
+  prompt_template: ''
+  prompt: ''
+- id: domain
+  title: Domain
+  status: implemented
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  notes: Domain models, contract and gate-processing engines.
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: model
+  title: Domain models
+  status: implemented
+  boundary: null
+  parent: domain
+  interface:
+    protocol: module
+    exports:
+    - ActivityAchieved
+    - ActionItem
+    - UserGroup
+    - User
+    - PulseResult
+    - Task
+    layout: folder
+  contract_version: 0.0.0
+  notes: Domain model package described in Milestone 1.1.
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: activity_achieved
+  title: ActivityAchieved
+  status: implemented
+  boundary: null
+  parent: model
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: achieved
+      type:
+        type: boolean
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  maps_to: []
+  calls: []
+  data_flows: []
+  notes: 'Base completion interface with val achieved: Boolean.'
+  prompt_template: ''
+  prompt: ''
+- id: action_item
+  title: ActionItem
+  status: implemented
+  boundary: null
+  parent: model
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: id
+      type:
+        type: integer
+      required: true
+    - name: description
+      type:
+        type: string
+      required: true
+    - name: achieved
+      type:
+        type: boolean
+      required: false
+      notes: Defaults to false.
+  contract_version: 0.0.0
+  dependencies: []
+  maps_to: []
+  calls: []
+  data_flows: []
+  notes: 'Data class (id: Long, description: String, achieved = false) implementing ActivityAchieved.'
+  prompt_template: ''
+  prompt: ''
+- id: user_group
+  title: UserGroup
+  status: implemented
+  boundary: null
+  parent: model
+  interface:
+    protocol: data-model
+    model_kind: enum
+    layout: file
+    enum_type: string
+    enum_values:
+    - name: USER
+      value: user
+    - name: ADMIN
+      value: admin
+  contract_version: 0.0.0
+  dependencies: []
+  maps_to: []
+  calls: []
+  data_flows: []
+  notes: Enum with USER(user) and ADMIN(admin).
+  prompt_template: ''
+  prompt: ''
+- id: user
+  title: User
+  status: implemented
+  boundary: null
+  parent: model
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: name
+      type:
+        type: string
+      required: true
+    - name: password
+      type:
+        type: string
+      required: true
+    - name: group
+      type:
+        type: user_group
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  maps_to: []
+  calls: []
+  data_flows: []
+  notes: Data class (name, password, group).
+  prompt_template: ''
+  prompt: ''
+- id: pulse_result
+  title: PulseResult
+  status: implemented
+  boundary: null
+  parent: model
+  interface:
+    protocol: data-model
+    model_kind: dto
+    layout: file
+    model_fields:
+    - name: inputPin
+      type:
+        type: string
+      required: true
+    - name: pulse
+      type:
+        type: string
+      required: true
+    - name: latchedInputs
+      type:
+        type: list
+        items:
+          type: integer
+      required: true
+    - name: output
+      type:
+        type: integer
+      required: true
+    - name: reset
+      type:
+        type: boolean
+      required: true
+  contract_version: 0.0.0
+  dependencies: []
+  maps_to: []
+  calls: []
+  data_flows: []
+  notes: Domain result containing input pin, pulse, latched inputs, output and reset state.
+  prompt_template: ''
+  prompt: ''
+- id: activity_processor
+  title: ActivityProcessor
+  status: implemented
+  boundary: null
+  parent: domain
+  interface:
+    protocol: contract
+    layout: file
+    methods:
+    - name: activities
+      params: []
+      returns:
+        type: list
+        items:
+          type: activity_achieved
+    - name: processActivity
+      params: []
+      returns:
+        type: boolean
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  notes: The implementation log records processActivity(callback?) but AGENTS.md has no callable type descriptor,
+    so the callback is described here rather than assigned an invented type.
+  prompt_template: ''
+  prompt: ''
+- id: task
+  title: Task
+  status: implemented
+  boundary: null
+  parent: model
+  interface:
+    protocol: class
+    layout: file
+    fields:
+    - name: id
+      type:
+        type: integer
+    - name: taskName
+      type:
+        type: string
+    - name: description
+      type:
+        type: string
+    - name: priority
+      type:
+        type: integer
+    - name: achieved
+      type:
+        type: boolean
+    - name: context
+      type:
+        type: string
+    - name: creationTime
+      type:
+        type: optional
+        of:
+          type: string
+    - name: activities
+      type:
+        type: list
+        items:
+          type: action_item
+    - name: progressPercent
+      type:
+        type: integer
+      notes: 'Computed property: 0 when activities.isEmpty(), otherwise count achieved * 100 / activities.size using
+        integer division.'
+  contract_version: 0.0.0
+  dependencies:
+  - node: activity_processor
+  - node: activity_achieved
+  - node: action_item
+  implements:
+  - node: activity_processor
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: task_domain_no_callback
+    description: No callback marks a task achieved.
+    given: Task.processActivity() with no callback.
+    expect: achieved becomes true.
+  - id: task_domain_callback
+    description: A callback can evaluate the task activities.
+    given: Task.processActivity(callback) with an activity-evaluating callback.
+    expect: achieved reflects the callback result.
+  - id: task_is_completed_empty
+    description: Empty task is not completed by the redesign completion rule.
+    given: Task with no activities.
+    expect: isCompleted is false.
+  - id: task_is_completed_partial
+    description: Task with an unchecked activity is not completed.
+    given: Task with at least one activity and at least one unchecked activity.
+    expect: isCompleted is false.
+  - id: task_is_completed_all
+    description: Task with all activities achieved is completed.
+    given: Task with at least one activity and all activities achieved.
+    expect: isCompleted is true.
+  - id: task_progress_empty
+    description: Empty task has zero progress.
+    given: Task with no activities.
+    expect: progressPercent is 0.
+  - id: task_progress_partial
+    description: Partial completion reports integer percentage.
+    given: Task with 1 of 4 activities achieved.
+    expect: progressPercent is 25.
+  - id: task_progress_truncated
+    description: Progress uses integer division.
+    given: Task with 2 of 3 activities achieved.
+    expect: progressPercent is 66.
+  - id: task_progress_all
+    description: All achieved activities report full progress.
+    given: Task with all activities achieved.
+    expect: progressPercent is 100.
+  notes: 'Data class implementing ActivityAchieved and ActivityProcessor. Redesign01 adds isCompleted = activities.isNotEmpty()
+    && activities.all { it.achieved }. Redesign02 adds progressPercent = 0 for no activities, otherwise achieved-count
+    * 100 / activity-count with integer division. Gate achieved behavior remains distinct: Tier-1 treats an empty
+    task as achieved, while isCompleted requires at least one activity. Activities are kept in ID order by the repository.'
+  prompt_template: ''
+  prompt: ''
+- id: process_activity
+  title: processActivity
+  status: implemented
+  boundary: null
+  parent: task
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: boolean
+    errors: []
+    preconditions: []
+    postconditions:
+    - achieved is set to true, or to the callback result when a callback is supplied
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Implementation log records an optional callback, but AGENTS.md has no callable type descriptor.
+  prompt_template: ''
+  prompt: ''
+- id: process_activity_with_gate
+  title: processActivityWithGate
+  status: implemented
+  boundary: null
+  parent: task
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: processor
+      type:
+        type: string
+    returns:
+      type: boolean
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: serial_and_gate_processor
+    operation_name: processPulse
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Tier-1 gate processing resets the arity pin to activities.size, feeds HIGH/LOW per ActionItem.achieved,
+    and breaks on reset. The concrete processor parameter type cannot be represented without inventing a type descriptor
+    for a class.
+  prompt_template: ''
+  prompt: ''
+- id: is_completed
+  title: isCompleted
+  status: implemented
+  boundary: null
+  parent: task
+  interface:
+    protocol: function
+    layout: function
+    params: []
+    returns:
+      type: boolean
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: is_completed_rule
+    description: Completion requires one or more activities and all activities achieved.
+    given: Task activity list.
+    expect: activities.isNotEmpty() && activities.all { it.achieved }.
+  notes: Computed property added in Redesign T1.
+  prompt_template: ''
+  prompt: ''
+- id: engine
+  title: Gate engines
+  status: implemented
+  boundary: null
+  parent: domain
+  interface:
+    protocol: module
+    exports:
+    - SerialAndGateProcessor
+    - TaskListPipelineProcessor
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: serial_and_gate_processor
+  title: SerialAndGateProcessor
+  status: implemented
+  boundary: null
+  parent: engine
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies: []
+  implements: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: gate_high_latching
+    description: HIGH pulses latch until arity is met.
+    given: HIGH pulses on a pin whose arity has not yet been reached.
+    expect: output remains 0 until the arity is met, then becomes 1.
+  - id: gate_low_reset
+    description: LOW resets the pin register.
+    given: LOW pulse.
+    expect: reset is true and the register is cleared.
+  - id: gate_invalid_pulse
+    description: Invalid pulse input is rejected.
+    given: A pulse other than HIGH or LOW.
+    expect_raises: IllegalArgumentException
+  - id: gate_non_integer_pin
+    description: Non-integer pin input is rejected.
+    given: A non-integer input pin.
+    expect_raises: IllegalArgumentException
+  notes: Singleton in-memory pin register. Arity is parsed from inputPin. Pulse is normalized with trim().uppercase().
+    HIGH latches 1 until size >= arity; LOW clears the register and returns reset=true. Thread safety uses @Synchronized
+    and ConcurrentHashMap<String, PinState>. Constructor-injected with @Inject.
+  prompt_template: ''
+  prompt: ''
+- id: process_pulse
+  title: processPulse
+  status: implemented
+  boundary: null
+  parent: serial_and_gate_processor
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: inputPin
+      type:
+        type: string
+    - name: pulse
+      type:
+        type: string
+    returns:
+      type: pulse_result
+    errors:
+    - code: IllegalArgumentException
+      description: Invalid pin or pulse input.
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Process a serial AND-gate pulse and return PulseResult.
+  prompt_template: ''
+  prompt: ''
+- id: task_list_pipeline_processor
+  title: TaskListPipelineProcessor
+  status: implemented
+  boundary: null
+  parent: engine
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies: []
+  implements: []
+  calls:
+  - node: serial_and_gate_processor
+    operation_name: processPulse
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: integrated_gate_task_flow
+    description: Tier-2 pipeline evaluates the task list through the serial AND gate.
+    given: A task list with task achieved values.
+    expect: Pipeline output reflects the task-list AND result; empty list returns output 1.
+  notes: Singleton Tier-2 processor. evaluateTaskList(tasks) returns output 1 for an empty list; otherwise resets
+    arity to tasks.size and pulses per task.achieved. Constructor-injected with @Inject.
+  prompt_template: ''
+  prompt: ''
+- id: evaluate_task_list
+  title: evaluateTaskList
+  status: implemented
+  boundary: null
+  parent: task_list_pipeline_processor
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: tasks
+      type:
+        type: list
+        items:
+          type: task
+    returns:
+      type: integer
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: serial_and_gate_processor
+    operation_name: processPulse
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Tier-2 task-list pipeline operation.
+  prompt_template: ''
+  prompt: ''
+- id: data
+  title: Data
+  status: implemented
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: local
+  title: Local persistence
+  status: implemented
+  boundary: null
+  parent: data
+  interface:
+    protocol: module
+    exports:
+    - A2DDatabase
+    - TaskDao
+    - TaskEntity
+    - ActionItemEntity
+    - TaskWithActionItems
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: entity
+  title: Room entities
+  status: implemented
+  boundary: null
+  parent: local
+  interface:
+    protocol: module
+    exports:
+    - TaskEntity
+    - ActionItemEntity
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: task_entity
+  title: TaskEntity
+  status: implemented
+  boundary: null
+  parent: entity
+  interface:
+    protocol: data-model
+    model_kind: db_schema
+    layout: file
+    model_fields:
+    - name: id
+      type:
+        type: integer
+      required: true
+    - name: taskName
+      type:
+        type: string
+      required: true
+    - name: description
+      type:
+        type: string
+      required: true
+    - name: priority
+      type:
+        type: integer
+      required: true
+    - name: context
+      type:
+        type: string
+      required: true
+    - name: achieved
+      type:
+        type: boolean
+      required: true
+    - name: creationTime
+      type:
+        type: string
+      required: false
+    - name: position
+      type:
+        type: integer
+      required: true
+      notes: User-controlled display order; independent of domain priority and stable task ID.
+  contract_version: 0.0.0
+  dependencies: []
+  maps_to:
+  - node: task
+  calls: []
+  data_flows: []
+  notes: 'Room entity for table tasks; primary key id. The log states fields taskName, description, priority, context,
+    achieved and creationTime. New ordering contract: position persists user-selected task-list order; migration
+    initializes existing positions deterministically.'
+  prompt_template: ''
+  prompt: ''
+- id: action_item_entity
+  title: ActionItemEntity
+  status: implemented
+  boundary: null
+  parent: entity
+  interface:
+    protocol: data-model
+    model_kind: db_schema
+    layout: file
+    model_fields:
+    - name: id
+      type:
+        type: integer
+      required: true
+    - name: taskId
+      type:
+        type: integer
+      required: true
+    - name: description
+      type:
+        type: string
+      required: true
+    - name: achieved
+      type:
+        type: boolean
+      required: true
+    - name: position
+      type:
+        type: integer
+      required: true
+      notes: User-controlled display order within taskId; independent of stable activity ID.
+  contract_version: 0.0.0
+  dependencies: []
+  maps_to:
+  - node: action_item
+  calls: []
+  data_flows: []
+  notes: 'Room entity for table action_items. Foreign key TaskEntity.id -> taskId with CASCADE delete and Index(taskId).
+    New ordering contract: position persists user-selected activity order within a task; migration initializes existing
+    positions in legacy ID order.'
+  prompt_template: ''
+  prompt: ''
+- id: relation
+  title: Room relations
+  status: implemented
+  boundary: null
+  parent: local
+  interface:
+    protocol: module
+    exports:
+    - TaskWithActionItems
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: task_with_action_items
+  title: TaskWithActionItems
+  status: implemented
+  boundary: null
+  parent: relation
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_entity
+  - node: action_item_entity
+  implements: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Room relation with @Embedded task and @Relation(parentColumn=id, entityColumn=taskId) actionItems.
+  prompt_template: ''
+  prompt: ''
+- id: dao
+  title: DAOs
+  status: implemented
+  boundary: null
+  parent: local
+  interface:
+    protocol: module
+    exports:
+    - TaskDao
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: task_dao
+  title: TaskDao
+  status: implemented
+  boundary: null
+  parent: dao
+  interface:
+    protocol: contract
+    layout: file
+    methods:
+    - name: getAllTasks
+      params: []
+      returns:
+        type: list
+        items:
+          type: task_with_action_items
+    - name: getTaskSnapshot
+      params: []
+      returns:
+        type: task_with_action_items
+    - name: getTaskById
+      params:
+      - name: id
+        type:
+          type: integer
+      returns:
+        type: task_with_action_items
+    - name: insertOrUpdateTask
+      params:
+      - name: task
+        type:
+          type: task_entity
+      returns:
+        type: integer
+    - name: deleteTask
+      params:
+      - name: id
+        type:
+          type: integer
+      returns:
+        type: integer
+    - name: updateTaskPositions
+      params:
+      - name: orderedTaskIds
+        type: &id002
+          type: list
+          items:
+            type: integer
+      returns:
+        type: integer
+    - name: replaceTaskActivities
+      params:
+      - name: taskId
+        type: &id001
+          type: integer
+      - name: activities
+        type:
+          type: list
+          items:
+            type: action_item_entity
+      returns:
+        type: integer
+    - name: appendTaskActivities
+      params:
+      - name: taskId
+        type: *id001
+      - name: activities
+        type:
+          type: list
+          items:
+            type: action_item_entity
+      returns:
+        type: integer
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  notes: 'Room DAO. The log also records suspend getTaskSnapshot/getTaskById, Flow getAllTasks, @Insert(REPLACE)
+    upserts, a transaction helper that inserts then deletes old items then inserts new items, and deleteTask():
+    Int. Exact Flow/suspend generic typing cannot be represented by the closed AGENTS descriptor language. Reordering
+    extension: task/activity queries and writes preserve explicit position. Position updates and activity append/replacement
+    run transactionally; exact coroutine/Flow typing remains described in notes because the schema has no such descriptors.'
+  prompt_template: ''
+  prompt: ''
+- id: a2d_database
+  title: A2DDatabase
+  status: implemented
+  boundary: null
+  parent: local
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_dao
+  implements: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Room database version 2 after the reordering enhancement; migration from version 1 adds task and activity
+    position columns and deterministically backfills positions without losing tasks, activities or achieved flags.
+    Existing database name remains a2d_database.db.
+  prompt_template: ''
+  prompt: ''
+- id: repository
+  title: Repository
+  status: implemented
+  boundary: null
+  parent: data
+  interface:
+    protocol: module
+    exports:
+    - TaskRepositoryImpl
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: task_repository_impl_unit
+  title: TaskRepositoryImpl file unit
+  status: implemented
+  boundary: null
+  parent: repository
+  interface:
+    protocol: module
+    exports:
+    - TaskRepositoryImpl
+    layout: skip
+    language: kotlin
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+  notes: Logical file unit required because the closed dependency rule permits module dependencies but not class-to-class
+    dependency targets.
+- id: task_repository_impl
+  title: TaskRepositoryImpl
+  status: implemented
+  boundary: null
+  parent: task_repository_impl_unit
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_dao
+  - node: task_entity
+  - node: action_item_entity
+  implements: []
+  calls: []
+  data_flows:
+  - node: task_dao
+    data_model: task_with_action_items
+    direction: read
+  - node: task
+    data_model: task
+    direction: write
+  stub_behavior: ''
+  tests: []
+  notes: Singleton injected with TaskDao. Maps Room relations to domain tasks, retrieves snapshots and IDs, saves
+    tasks and timestamps formatted yyyy-MM-dd HH:mm:ss, rebuilds ActionItemEntity rows keyed by taskId, deletes
+    tasks and returns Boolean. Enhancement replaces ID-based display sorting with position-based sorting for tasks
+    and activities. Reorder operations validate exact task/activity membership and persist position changes atomically.
+    CSV append allocates fresh activity IDs and positions after the current maximum; imported CSV activity ID is
+    informational only and is ignored for identity.
+  prompt_template: ''
+  prompt: ''
+- id: di
+  title: Dependency injection
+  status: implemented
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports:
+    - AppModule
+    - A2DApplication
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: app_module
+  title: AppModule
+  status: implemented
+  boundary: null
+  parent: di
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_dao
+  implements: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: '@Module @InstallIn(SingletonComponent::class), provides singleton A2DDatabase and TaskDao.'
+  prompt_template: ''
+  prompt: ''
+- id: a2d_application
+  title: A2DApplication
+  status: implemented
+  boundary: null
+  parent: di
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies: []
+  implements: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: '@HiltAndroidApp class A2DApplication : Application().'
+  prompt_template: ''
+  prompt: ''
+- id: ui
+  title: UI
+  status: implemented
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: theme
+  title: Theme
+  status: implemented
+  boundary: null
+  parent: ui
+  interface:
+    protocol: module
+    exports:
+    - CalmGreen
+    - CalmTeal
+    - SoftGrey
+    - DarkGrey
+    - AlertRed
+    - A2DTheme
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: color
+  title: Color
+  status: implemented
+  boundary: null
+  parent: theme
+  interface:
+    protocol: module
+    exports:
+    - CalmGreen
+    - CalmTeal
+    - SoftGrey
+    - DarkGrey
+    - AlertRed
+    layout: file
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+  notes: 'Color.kt defines CalmGreen #2E7D32, CalmTeal #00695C, SoftGrey #F5F5F5, DarkGrey #212121 and AlertRed
+    #C62828.'
+- id: theme_kt
+  title: Theme
+  status: implemented
+  boundary: null
+  parent: theme
+  interface:
+    protocol: module
+    exports:
+    - A2DTheme
+    layout: file
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+  notes: Theme.kt defines a fixed LightColorScheme with primary CalmTeal, secondary CalmGreen, background SoftGrey,
+    surface/onPrimary White and error AlertRed; no dark/dynamic color branches. Type.kt was deleted.
+- id: task_ui
+  title: Task UI
+  status: implemented
+  boundary: null
+  parent: ui
+  interface:
+    protocol: module
+    exports:
+    - TaskListScreen
+    - TaskDetailScreen
+    - TaskViewModel
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: task_view_model
+  title: TaskViewModel
+  status: implemented
+  boundary: null
+  parent: task_ui
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_repository_impl_unit
+  - node: activity_csv
+  implements: []
+  calls:
+  - node: task_repository_impl
+    operation_name: getAllTasks
+  - node: task_repository_impl
+    operation_name: getTask
+  - node: task_repository_impl
+    operation_name: saveTask
+  - node: task_repository_impl
+    operation_name: deleteTask
+  - node: serial_and_gate_processor
+    operation_name: processPulse
+  - node: task_list_pipeline_processor
+    operation_name: evaluateTaskList
+  - node: reorder_tasks
+    operation_name: reorderTasks
+  - node: reorder_activities
+    operation_name: reorderActivities
+  - node: import_activities_csv
+    operation_name: importActivitiesCsv
+  - node: export_activities_csv
+    operation_name: exportActivitiesCsv
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: '@HiltViewModel. Exposes tasks, currentTask and milestoneOutput StateFlows. Redesign01 operations: selectTask,
+    toggleActivity, addActivity, deleteActivity, deleteTask and retained createSampleTask. Redesign02 adds updateTask(taskId,
+    newName, newDescription) with trim, blank-name fallback and no-op guard. Bugfix B1 adds updateActivity(taskId,
+    activityId, newDescription) with trim, blank-description fallback and no-op guard. Activity description edits
+    do not recompute gates because achievement flags are unchanged. addActivity uses max(globalMaxActivityId, taskId*10)+1
+    and sorts to the end by ID. Mutations reload from Room; achievement-changing operations recompute Tier-1 and
+    Tier-2. Enhancement contract adds reorderTasks(orderedTaskIds), reorderActivities(taskId, orderedActivityIds),
+    importActivitiesCsv(taskId, csvContent) using append semantics, and exportActivitiesCsv(taskId). CSV columns
+    are position, description, achieved, id; imported id is informational only and fresh IDs are generated. Reordering
+    operations validate exact permutations and persist position changes atomically.'
+  prompt_template: ''
+  prompt: ''
+- id: logicgate_ui
+  title: Logic Gate UI
+  status: implemented
+  boundary: null
+  parent: ui
+  interface:
+    protocol: module
+    exports:
+    - LogicGateScreen
+    - LogicGateViewModel
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+- id: logic_gate_view_model
+  title: LogicGateViewModel
+  status: implemented
+  boundary: null
+  parent: logicgate_ui
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies: []
+  implements: []
+  calls:
+  - node: serial_and_gate_processor
+    operation_name: processPulse
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: '@HiltViewModel wrapping SerialAndGateProcessor.processPulse. Exposes lastResult and errorMessage StateFlows
+    and catches IllegalArgumentException.'
+  prompt_template: ''
+  prompt: ''
+- id: logic_gate_screen
+  title: LogicGateScreen
+  status: implemented
+  boundary: null
+  parent: logicgate_ui
+  interface:
+    protocol: module
+    layout: file
+    exports:
+    - LogicGateScreen
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+  notes: Compose screen with arity input, Pulse HIGH and Pulse LOW (Reset) buttons, error text, and result Card
+    showing pin, pulse, latched, output and reset.
+- id: main_activity
+  title: MainActivity
+  status: implemented
+  boundary: null
+  parent: ui
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_ui
+  - node: logicgate_ui
+  implements: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: '@AndroidEntryPoint. Uses A2DTheme, Scaffold, NavigationBar and hiltViewModel(). Uses rememberNavController
+    and NavHost with taskList, taskDetail/{taskId} and logicGate routes. Bottom tabs remain Tasks and Logic Gate;
+    task detail keeps Tasks selected. Detail deletion navigates back to the list. Latest wiring passes onSaveEdit
+    to TaskViewModel.updateTask and onUpdateActivity to TaskViewModel.updateActivity for both list and detail routes.
+    navigation-compose 2.8.2 and material-icons-core are required by the redesign.'
+  prompt_template: ''
+  prompt: ''
+- id: task_list_screen
+  title: TaskListScreen
+  status: implemented
+  boundary: null
+  parent: task_ui
+  interface:
+    protocol: module
+    layout: file
+    exports:
+    - TaskListScreen
+    - TaskCard
+    - TaskCardHeader
+    - TaskCardBody
+    - ActivityRow
+    - TaskDeleteDialog
+    - ActivityDeleteDialog
+  contract_version: 0.0.0
+  dependencies:
+  - node: model
+  - node: activity_csv
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+  notes: 'Latest TaskListScreen is the redesign02 implementation. Uses hoisted mutableStateMapOf state for per-task
+    expanded/editing states so state survives LazyColumn disposal. TaskCardHeader contains Edit/Done, task name,
+    progressPercent and delete controls; header tap toggles collapse. Expanded body shows optional description,
+    capped activity list, Add activity; body tap navigates to detail unless editing. Inline task editing uses two
+    OutlinedTextFields with per-field focus tracking and deferred two-frame focus-loss commit. Bugfix B1 adds inline
+    activity-description editing in ActivityRow with edit/done, IME Done and deferred focus-loss commit, mutual
+    exclusion with task editing, and onUpdateActivity wiring. Mandatory task/activity confirmation dialogs remain.
+    Old TaskScreen.kt was removed. Enhancement contract: drag handle for task cards and activity rows, plus accessible
+    Move Up/Move Down actions; persist only after drop/action. Per-card CSV menu exposes export and append-import;
+    use Android Storage Access Framework, preview/validate before import confirmation, and show recoverable errors.
+    Preserve existing edit/collapse/navigation gestures by limiting drag initiation to the handle. Activity CSV
+    actions are also available on Task Detail.'
+- id: task_detail_screen
+  title: TaskDetailScreen
+  status: implemented
+  boundary: null
+  parent: task_ui
+  interface:
+    protocol: module
+    layout: file
+    exports:
+    - TaskDetailScreen
+    - TaskDetailHeader
+  contract_version: 0.0.0
+  dependencies:
+  - node: model
+  - node: task_ui
+  - node: activity_csv
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  prompt_template: ''
+  prompt: ''
+  notes: 'Full-screen detail route. Back button, title/description, completion badge using Task.isCompleted, ID-ordered
+    ActivityRow list, task/activity deletion dialogs, Add activity button, and centered CircularProgressIndicator
+    while currentTask is null. Bugfix B1 adds inline activity-description editing with the same hoisted focus/deferred-commit
+    mechanics as TaskListScreen and exposes onUpdateActivity. Enhancement contract: activity drag handle and accessible
+    Move Up/Move Down actions, plus CSV import/export actions for the current task. CSV import appends only after
+    preview and confirmation; source id is informational and ignored for destination identity.'
+- id: test
+  title: Unit tests
+  status: tested
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports: []
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: sprint1_tests
+    description: Sprint 1 unit suite passes.
+    given: SerialAndGateProcessorTest, TaskDomainTest and IntegratedGateTaskFlowTest.
+    expect: 8 tests pass with 0 failures and 0 errors.
+  - id: redesign_tests
+    description: Redesign 01 test suite passes.
+    given: Updated test suite after isCompleted tests were added.
+    expect: 11 tests pass with 0 failures and 0 errors.
+  prompt_template: ''
+  prompt: ''
+- id: serial_and_gate_processor_test
+  title: SerialAndGateProcessorTest
+  status: tested
+  boundary: null
+  parent: test
+  interface:
+    protocol: module
+    layout: file
+    exports: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: four_gate_tests
+    description: Four gate processor tests.
+    given: HIGH latching, LOW reset, invalid pulse and non-integer pin cases.
+    expect: 4 tests pass.
+  prompt_template: ''
+  prompt: ''
+  notes: 4 gate processor tests remain green.
+- id: task_domain_test
+  title: TaskDomainTest
+  status: tested
+  boundary: null
+  parent: test
+  interface:
+    protocol: module
+    layout: file
+    exports: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: nine_task_domain_tests
+    description: Nine Task domain tests covering processActivity, isCompleted and progressPercent.
+    given: No-callback/callback behavior, empty/partial/all-achieved completion cases, and 0/25/66/100 progress
+      cases.
+    expect: 9 tests pass.
+  prompt_template: ''
+  prompt: ''
+  notes: 'Latest verification: TaskDomainTest contains 9 tests: 2 original behavior tests, 3 isCompleted tests from
+    redesign01, and 4 progressPercent tests from redesign02.'
+- id: integrated_gate_task_flow_test
+  title: IntegratedGateTaskFlowTest
+  status: tested
+  boundary: null
+  parent: test
+  interface:
+    protocol: module
+    layout: file
+    exports: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: two_integrated_tests
+    description: Tier-1 task gate and Tier-2 task-list pipeline tests.
+    given: Integrated ActionItem and Task gate flows.
+    expect: 2 tests pass.
+  prompt_template: ''
+  prompt: ''
+  notes: 2 integrated Tier-1/Tier-2 tests remain green.
+- id: update_task
+  title: updateTask
+  status: implemented
+  boundary: null
+  parent: task_view_model
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type:
+        type: integer
+    - name: newName
+      type:
+        type: string
+    - name: newDescription
+      type:
+        type: string
+    returns:
+      type: void
+    errors: []
+    preconditions: []
+    postconditions:
+    - Inputs are trimmed; a blank resolved name falls back to the stored taskName.
+    - If resolved name and description equal stored values, no Room write occurs.
+    - Updated task is persisted without changing activities, achieved, priority or context.
+    - Tier-1/Tier-2 gate evaluation is not recalculated because name/description do not affect achievement.
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: task_repository_impl
+    operation_name: getTask
+  - node: task_repository_impl
+    operation_name: saveTask
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Redesign02 R2-T2 operation.
+  prompt_template: ''
+  prompt: ''
+- id: update_activity
+  title: updateActivity
+  status: implemented
+  boundary: null
+  parent: task_view_model
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type:
+        type: integer
+    - name: activityId
+      type:
+        type: integer
+    - name: newDescription
+      type:
+        type: string
+    returns:
+      type: void
+    errors: []
+    preconditions: []
+    postconditions:
+    - Description is trimmed; blank input falls back to the existing description.
+    - If the resolved description is unchanged, no Room write occurs.
+    - Achievement flags are preserved and gate/pipeline recalculation is skipped.
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: task_repository_impl
+    operation_name: getTask
+  - node: task_repository_impl
+    operation_name: saveTask
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Bugfix B1 F2/F3 operation used by both TaskListScreen and TaskDetailScreen.
+  prompt_template: ''
+  prompt: ''
+- id: verification
+  title: Latest verification
+  status: tested
+  boundary: null
+  parent: app
+  interface:
+    protocol: module
+    exports: []
+    layout: skip
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: unit_tests_15
+    description: All unit tests pass.
+    given: ./gradlew test
+    expect: 15/15 tests pass with 0 failures and 0 errors.
+  - id: debug_build
+    description: Debug APK builds successfully.
+    given: ./gradlew assembleDebug
+    expect: BUILD SUCCESSFUL; app-debug.apk produced.
+  - id: compile_debug_kotlin
+    description: Kotlin compilation succeeds after B1 fixes.
+    given: ./gradlew compileDebugKotlin
+    expect: BUILD SUCCESSFUL.
+  notes: 'Latest log state: redesign02 and Bugfix B1 are complete. Final recorded verification is 15/15 unit tests
+    green and assembleDebug green, producing app-debug.apk of 10,433,734 bytes in the B1 verification. Physical-device
+    deployment remains blocked because adb has no attached device.'
+  prompt_template: ''
+  prompt: ''
+- id: activity_csv
+  title: Activity CSV
+  status: implementing
+  boundary: null
+  parent: data
+  interface:
+    protocol: module
+    exports:
+    - ActivityCsvCodec
+    layout: folder
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: CSV serialization and parsing for activity rows. UTF-8; columns position, description, achieved, id. ID
+    is informational on import and never used as the destination database identity. Parser must correctly handle
+    quoted commas, quotes, embedded newlines and Unicode.
+  prompt_template: ''
+  prompt: ''
+- id: activity_csv_codec
+  title: ActivityCsvCodec
+  status: implementing
+  boundary: null
+  parent: activity_csv
+  interface:
+    protocol: class
+    layout: file
+    fields: []
+  contract_version: 0.0.0
+  dependencies:
+  - node: action_item
+  implements: []
+  calls:
+  - node: activity_csv_codec
+    operation_name: parse
+  - node: activity_csv_codec
+    operation_name: serialize
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: csv_round_trip
+    description: CSV export/import round-trips activity description, achieved and position.
+    given: Activities containing commas, quotes, Unicode and line breaks.
+    expect: All supported fields parse without corruption.
+  - id: csv_id_informational
+    description: Imported CSV IDs do not become database identities.
+    given: CSV rows containing an id column.
+    expect: Importer creates fresh activity IDs and treats source id as informational.
+  - id: csv_invalid_rejected
+    description: Malformed or invalid CSV is rejected before mutation.
+    given: Missing required columns, invalid positions or invalid achieved values.
+    expect: Validation errors are returned and destination task remains unchanged.
+  notes: 'Pure CSV codec: exports header position,description,achieved,id. On import, position, description and
+    achieved are required; id is optional/informational and ignored for identity. Import appends activities in CSV
+    position order and allocates new local IDs and positions.'
+  prompt_template: ''
+  prompt: ''
+- id: reorder_tasks
+  title: reorderTasks
+  status: implementing
+  boundary: null
+  parent: task_view_model
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: orderedTaskIds
+      type: *id002
+    returns:
+      type: void
+    errors: []
+    preconditions: []
+    postconditions:
+    - The IDs must be an exact permutation of current task IDs.
+    - Assign sequential position values in supplied order and persist atomically.
+    - Do not modify priority or task IDs.
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: task_repository_impl
+    operation_name: updateTaskPositions
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Persists user-defined task order; UI calls this once after drag completion or an accessible Move Up/Down
+    action.
+  prompt_template: ''
+  prompt: ''
+- id: reorder_activities
+  title: reorderActivities
+  status: implementing
+  boundary: null
+  parent: task_view_model
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type: *id001
+    - name: orderedActivityIds
+      type: *id002
+    returns:
+      type: void
+    errors: []
+    preconditions: []
+    postconditions:
+    - The activity IDs must be an exact permutation of activities belonging to taskId.
+    - Assign sequential positions in supplied order and persist atomically.
+    - Preserve activity IDs, descriptions and achieved flags.
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: task_repository_impl
+    operation_name: reorderActivities
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Persists activity order for a single task. Activity order is shared by TaskListScreen and TaskDetailScreen.
+    Re-evaluate gates using the new order only where required by the existing sequential gate semantics.
+  prompt_template: ''
+  prompt: ''
+- id: import_activities_csv
+  title: importActivitiesCsv
+  status: implementing
+  boundary: null
+  parent: task_view_model
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type: *id001
+    - name: csvContent
+      type:
+        type: string
+    returns:
+      type: integer
+    errors: []
+    preconditions: []
+    postconditions:
+    - Validate the complete CSV before writing.
+    - Append valid imported rows to the selected task only.
+    - Ignore imported id for database identity; allocate fresh IDs.
+    - Append positions after the current maximum position.
+    - On validation or transaction failure, leave existing activities unchanged.
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: activity_csv_codec
+    operation_name: parse
+  - node: task_repository_impl
+    operation_name: appendActivities
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: CSV import policy is append. UI previews parsed rows and asks for confirmation. After commit, recalculate
+    task completion/progress and Tier-1/Tier-2 gate state as appropriate.
+  prompt_template: ''
+  prompt: ''
+- id: export_activities_csv
+  title: exportActivitiesCsv
+  status: implementing
+  boundary: null
+  parent: task_view_model
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type: *id001
+    returns:
+      type: string
+    errors: []
+    preconditions: []
+    postconditions:
+    - Export all activities belonging to taskId in position order.
+    - Include columns position, description, achieved, id.
+    - The id column is informational when re-imported.
+  contract_version: 0.0.0
+  dependencies: []
+  calls:
+  - node: task_repository_impl
+    operation_name: getTaskForExport
+  - node: activity_csv_codec
+    operation_name: serialize
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Returns CSV content for the Android Storage Access Framework save-document flow; expose from both task
+    card and Task Detail screen.
+  prompt_template: ''
+  prompt: ''
+- id: ordering_csv_tests
+  title: Ordering and CSV tests
+  status: implementing
+  boundary: null
+  parent: test
+  interface:
+    protocol: module
+    exports: []
+    layout: skip
+  contract_version: 0.0.0
+  dependencies:
+  - node: task_ui
+  - node: repository
+  - node: activity_csv
+  - node: task_dao
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests:
+  - id: task_order_persists
+    description: Task order persists after reload.
+    given: Tasks reordered and persisted.
+    expect: Repository returns tasks in position order.
+  - id: activity_order_persists
+    description: Activity order persists and matches in list/detail.
+    given: Activities reordered within one task.
+    expect: Both screens receive identical position order.
+  - id: csv_append_preserves_existing
+    description: CSV import appends instead of replacing existing activities.
+    given: Task with existing activities and a valid CSV.
+    expect: Existing rows remain; imported rows receive fresh IDs and positions after the current maximum.
+  - id: csv_invalid_atomic
+    description: Invalid CSV does not mutate task data.
+    given: CSV with invalid header, position or achieved value.
+    expect: Import rejected and no rows added.
+  - id: migration_v1_to_v2
+    description: Database migration preserves legacy data and initializes order.
+    given: Version 1 database with tasks and activities.
+    expect: Version 2 schema contains positions and all prior data/achieved flags are preserved.
+  - id: reorder_gate_regression
+    description: Reorder does not change achieved flags and subsequent gate evaluation uses the new sequence.
+    given: A task whose activity order is changed.
+    expect: Flags remain unchanged and gate evaluation consumes persisted order.
+  notes: New tests are planned and not yet executed. Existing baseline remains 15/15 unit tests and successful assembleDebug
+    before this enhancement.
+  prompt_template: ''
+  prompt: ''
+- id: repo_update_task_positions
+  title: updateTaskPositions
+  status: implementing
+  boundary: null
+  parent: task_repository_impl
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: orderedTaskIds
+      type:
+        type: list
+        items: &id003
+          type: integer
+    returns: *id003
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Validates an exact permutation of current task IDs and persists sequential positions in one Room transaction.
+  prompt_template: ''
+  prompt: ''
+- id: repo_reorder_activities
+  title: reorderActivities
+  status: implementing
+  boundary: null
+  parent: task_repository_impl
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type: *id003
+    - name: orderedActivityIds
+      type:
+        type: list
+        items: *id003
+    returns: *id003
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Validates an exact permutation of activity IDs for taskId and persists sequential positions transactionally;
+    preserves IDs, descriptions and achieved flags.
+  prompt_template: ''
+  prompt: ''
+- id: repo_append_activities
+  title: appendActivities
+  status: implementing
+  boundary: null
+  parent: task_repository_impl
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type: *id003
+    - name: activities
+      type:
+        type: list
+        items:
+          type: action_item
+    returns: *id003
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Allocates fresh local IDs and positions after the current maximum, appends rows to only the selected task,
+    and commits atomically. Recalculates task/gate state after successful commit at orchestration level.
+  prompt_template: ''
+  prompt: ''
+- id: repo_get_task_for_export
+  title: getTaskForExport
+  status: implementing
+  boundary: null
+  parent: task_repository_impl
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: taskId
+      type: *id003
+    returns:
+      type: task
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Returns latest persisted task with activities sorted by position for CSV export.
+  prompt_template: ''
+  prompt: ''
+- id: csv_parse
+  title: parse
+  status: implementing
+  boundary: null
+  parent: activity_csv_codec
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: csvContent
+      type: &id004
+        type: string
+    returns:
+      type: list
+      items:
+        type: action_item
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Parses UTF-8 CSV with position, description, achieved and optional informational id. Validates required
+    fields and ordering; imported id never controls destination identity.
+  prompt_template: ''
+  prompt: ''
+- id: csv_serialize
+  title: serialize
+  status: implementing
+  boundary: null
+  parent: activity_csv_codec
+  interface:
+    protocol: function
+    layout: function
+    params:
+    - name: activities
+      type:
+        type: list
+        items:
+          type: action_item
+    returns: *id004
+    errors: []
+    preconditions: []
+    postconditions: []
+  contract_version: 0.0.0
+  dependencies: []
+  calls: []
+  data_flows: []
+  stub_behavior: ''
+  tests: []
+  notes: Serializes all activities to UTF-8-compatible CSV with header position,description,achieved,id in position
+    order.
+  prompt_template: ''
+  prompt: ''
