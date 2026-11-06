@@ -1,10 +1,26 @@
-# TechStack.md: Technology Selection & Architectural Justification
+# ADR 0001 — Technology Stack Selection
 
-This document details the rationale behind the technology choices for porting the **A2D (Adult ADHD Assistant)** system from the Python FastAPI reference blueprint (`a2d_graph.yaml`) into an offline-first, native Android application.
+- Status: Accepted
+- Date: 2026-11-06
+- Owner: project maintainer
+- Supersedes: none
+- Superseded by: none
 
----
+## Context
 
-## 1. Executive Matrix
+This decision records the rationale for porting the A2D (Adult ADHD Assistant) system from the Python
+FastAPI reference blueprint (`a2d_graph.yaml`) into an offline-first, native Android application. The
+current stack is summarized in [README §3](../../README.md#3-technology-stack).
+
+> **Implementation status note:** this record preserves the original technology rationale. The
+> toolchain versions have been updated to the versions actually in use. The security/authentication
+> section (BiometricPrompt + KeyStore) describes an intended direction, not current functionality:
+> the codebase currently contains only the `User` / `UserGroup` domain models and has no login or
+> biometric UI.
+
+## Decision
+
+### 1. Executive Matrix
 
 | Layer / Concern | Chosen Technology | Primary Alternatives Considered | Key Justification for A2D |
 | --- | --- | --- | --- |
@@ -18,9 +34,9 @@ This document details the rationale behind the technology choices for porting th
 
 ---
 
-## 2. Detailed Component Breakdown
+### 2. Detailed Component Breakdown
 
-### 2.1 Language: Kotlin 2.x
+#### 2.1 Language: Kotlin 2.x
 
 * **1:1 Mirroring of Blueprint Domain Shapes:**
 * `a2d_graph.yaml` strictly specifies data models with optional defaults (e.g., `Task.creation_time`, `context` defaulting to `"No Context"`, `achieved` defaulting to `false`).
@@ -48,7 +64,7 @@ This document details the rationale behind the technology choices for porting th
 
 ---
 
-### 2.2 UI Toolkit: Jetpack Compose with Material 3
+#### 2.2 UI Toolkit: Jetpack Compose with Material 3
 
 * **ADHD Behavioral Scaffolding & Low Cognitive Load:**
 * Adults with ADHD experience executive dysfunction and easily suffer from visual overwhelm.
@@ -74,7 +90,7 @@ This document details the rationale behind the technology choices for porting th
 
 ---
 
-### 2.3 Persistence Engine: Room (SQLite Abstraction)
+#### 2.3 Persistence Engine: Room (SQLite Abstraction)
 
 * **Replacing Vulnerable Flat Files:**
 * In the reference implementation, `task_service` serialized the entire dictionary to `server/task.json` on every create, update, or delete operation.
@@ -99,7 +115,7 @@ This document details the rationale behind the technology choices for porting th
 
 ---
 
-### 2.4 Asynchronous Engine: Kotlin Coroutines & Flow
+#### 2.4 Asynchronous Engine: Kotlin Coroutines & Flow
 
 * **Structured Concurrency:**
 * Managing asynchronous database I/O and sequential pulse processing across the logic gate is scoped to `viewModelScope`.
@@ -118,7 +134,7 @@ This document details the rationale behind the technology choices for porting th
 
 ---
 
-### 2.5 Dependency Injection: Dagger Hilt
+#### 2.5 Dependency Injection: Dagger Hilt
 
 * **Preserving Stateful In-Memory Singletons:**
 * In `a2d_graph.yaml`, the `mapper` module retains an in-memory instance of `SerialAndGateProcessor` so that latched input states persist across multiple operations.
@@ -141,7 +157,7 @@ This document details the rationale behind the technology choices for porting th
 
 ---
 
-### 2.6 Local Security: Android BiometricPrompt & KeyStore
+#### 2.6 Local Security: Android BiometricPrompt & KeyStore
 
 * **Resolving Insecure Blueprint Storage:**
 * The original blueprint notes that user credentials in `server/users.json` were *“stored and compared in plaintext”*.
@@ -158,12 +174,32 @@ This document details the rationale behind the technology choices for porting th
 
 ---
 
-### 2.7 Hardware & Tooling Alignment (macOS 12.7.6 / 8 GB RAM)
+#### 2.7 Hardware & Tooling Alignment (macOS 12.7.6 / 8 GB RAM)
 
 * **Gradle Memory Conservation:**
-* The toolchain configuration (`Java 17`, `AGP 8.2.2`, `Compose Compiler 1.5.8`) allows building directly using Gradle CLI (`./gradlew test`, `./gradlew installDebug`).
+* The toolchain configuration (Java 17, AGP 8.5.2, Kotlin 2.0.20, Compose Gradle plugin) allows building directly using Gradle CLI (`./gradlew test`, `./gradlew installDebug`).
 * Avoids memory-heavy runtime compilation layers (like cross-platform Flutter/React-Native bridges), keeping memory consumption within the 8 GB ceiling of a 2017 MacBook Air.
 
 
 * **Direct JVM Unit Testing:**
 * Pure Kotlin domain modules (`Task`, `ActionItem`, `SerialAndGateProcessor`) execute directly on the local host JVM via JUnit 4, avoiding the thermal and memory penalties of running local Android Studio emulators.
+
+## Consequences
+
+- The app is offline-first: Room is the source of truth and emits `Flow` updates to the UI.
+- Hilt provides compile-time dependency verification and keeps gate state in `@Singleton` scope.
+- Compose keeps the UI reactive and lowers cognitive load for ADHD users.
+- The biometric/KeyStore security direction remains unimplemented; see the status note above.
+- The toolchain is optimized for the 8 GB development machine, not for cross-platform reuse.
+
+## Alternatives considered
+
+The executive matrix lists the primary alternatives per layer. Flutter/React Native were rejected
+for memory overhead; XML views for imperative state-synchronization bugs; flat JSON for corruption
+risk; Koin/manual DI for weaker compile-time guarantees; and plaintext credentials for security.
+
+## References
+
+- [README §3 — Technology Stack](../../README.md#3-technology-stack)
+- [README §8 — Deployment](../../README.md#8-deployment)
+- [Implementation log](../history/implementation-log.md)

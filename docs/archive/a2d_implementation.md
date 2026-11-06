@@ -1,5 +1,8 @@
 # implementation.md — End-to-End Implementation Blueprint for A2D Android
 
+> **Status: Archived (2026-11-06).** Superseded/historical material, kept for history only. Do not use
+> it as current guidance; see [README.md](../../README.md) and [docs/INDEX.md](../INDEX.md).
+
 This specification details the step-by-step implementation for porting the Adult ADHD Assistant (`A2D`) application from the reference blueprint into a native, offline-first Android application. Every file, command, code block, and configuration is presented in full so that automated code-generation agents can implement, verify, and package the project deterministically without hallucinations or missing references.
 
 ---

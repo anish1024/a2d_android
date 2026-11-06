@@ -1,3 +1,6 @@
+> **Status: Archived (2026-11-06).** Superseded/historical material, kept for history only. Do not use
+> it as current guidance; see [README.md](../../README.md) and [docs/INDEX.md](../INDEX.md).
+
 A thorough audit of `implementation.md` against `a2d_graph.yaml`, the Android Gradle Plugin (AGP) / Compose toolchain, and automated agent execution requirements reveals **three technical inconsistencies** that would cause an autonomous agent (like Qwen 2.5 9B / OpenCode) to fail during compilation or assembly.
 
 Below are the exact issues found, their fixes, followed by the formal **Go-Ahead Verdict**.

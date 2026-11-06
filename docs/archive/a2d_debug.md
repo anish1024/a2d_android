@@ -1,5 +1,8 @@
 # Running the A2D App Locally — Step-by-Step
 
+> **Status: Archived (2026-11-06).** Superseded/historical material, kept for history only. Do not use
+> it as current guidance; see [README.md](../../README.md) and [docs/INDEX.md](../INDEX.md).
+
 Verified environment from `a2d_setup.md`: JDK 17 at
 `~/tools/jdk17/jdk-17.0.20.1+1/Contents/Home`, Android SDK at
 `~/tools/android/sdk`, project at `A2D/` (builds clean with

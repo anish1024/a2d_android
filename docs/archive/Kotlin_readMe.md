@@ -1,5 +1,8 @@
 # kotlin_readme.md
 
+> **Status: Archived (2026-11-06).** Superseded/historical material, kept for history only. Do not use
+> it as current guidance; see [README.md](../../README.md) and [docs/INDEX.md](../INDEX.md).
+
 Consolidated guide covering Kotlin, Android runtime architecture, Gradle mechanics, the **A2D (Adult ADHD Assistant)** project pipeline, and physical device deployment.
 
 ---

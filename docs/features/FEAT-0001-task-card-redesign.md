@@ -1,6 +1,50 @@
-# Task Card Redesign – Final Specification (v1.0)
+# FEAT-0001 — Task Card Redesign
 
-## Overview
+- Status: Implemented
+- Owner: project maintainer
+- Last updated: 2026-11-06
+- Related: [Implementation log](../history/implementation-log.md), [README §4.3](../../README.md#43-presentation-layer--ui-architecture)
+- Target version: 1.0.0
+
+> **Status: implemented.** This record combines the delivered summary and the original design
+> specification. Current behavior is described in
+> [README §4.3](../../README.md#43-presentation-layer--ui-architecture). Historical per-task progress
+> reports are in the [implementation log](../history/implementation-log.md).
+
+## Delivered implementation
+
+Summary of tasks completed under the Task Card Redesign v1.0 specification. The original design is
+preserved in [Original specification v1.0](#original-specification-v10) below. Per-task progress
+reports are in the [implementation log](../history/implementation-log.md).
+
+| # | Task | Status | What was delivered |
+| --- | --- | --- | --- |
+| T1 | Domain completion rule & ID ordering | ✅ | `Task.isCompleted` = `activities.isNotEmpty() && activities.all { it.achieved }`; `TaskRepositoryImpl` maps activities with `.sortedBy { it.id }` (all 3 query methods) so items always render in ID order; 3 new unit tests in `TaskDomainTest` |
+| T2 | ViewModel operations | ✅ | `TaskViewModel` now exposes `tasks`, `currentTask: StateFlow<Task?>` (derived via `combine(tasks, selectedTaskId)`), `selectTask(taskId)`, and the spec operations `toggleActivity(taskId, activityId, achieved)`, `addActivity(taskId)`, `deleteActivity(taskId, activityId)`, `deleteTask(taskId)` — all Room-backed with Tier-1 gate re-evaluation and Tier-2 pipeline recalculation |
+| T3 | Jetpack Navigation | ✅ | Added `androidx.navigation:navigation-compose:2.8.2` (+ `material-icons-core`); `MainActivity` now hosts a `NavHost` with routes `taskList`, `taskDetail/{taskId}` (Long arg) and `logicGate`; bottom tabs retained, Tasks tab stays active on the detail route |
+| T4 | TaskListScreen | ✅ | Compact `ElevatedCard` per task: × task-delete in header, optional description, checkbox activity list (strikethrough + 60 % fade when done), per-activity 🗑 delete, `+ Add activity` button; activity list capped at 200 dp for internal scrolling; card body taps open the detail screen; both deletes use confirmation `AlertDialog`s. Replaces the old `TaskScreen.kt` (removed) |
+| T5 | TaskDetailScreen | ✅ | Full-screen view: back arrow (`navigateUp()`), task header with green "Completed" / neutral "In progress" badge pill, full activity list with shared `ActivityRow`, task-delete button in the top bar (confirm → delete + navigate back), `+ Add activity` below the list, loading indicator while the task flow resolves |
+| T6 | Verification | ✅ | `./gradlew test` → **11/11 tests pass**; `./gradlew assembleDebug` → BUILD SUCCESSFUL (`app-debug.apk`, 10.3 MB). No Room schema changes required |
+| T7 | Documentation | ✅ | This feature record + per-task entries in the [implementation log](../history/implementation-log.md) |
+
+**Behavior notes**
+
+- Completion rule used everywhere in the UI: a task is completed only when it has **at least one** activity and **all** activities are checked (the empty task is *not* completed — distinct from the Tier-1 gate's `achieved` flag, which is kept for the milestone pipeline).
+- All delete operations (task-level and per-activity, in both list and detail views) require confirmation via `AlertDialog`.
+- Activities are never reordered — they always display in original ID order; new activities append at the end (globally unique monotonic IDs).
+- No inline expand/collapse of activity items; tapping a card navigates to the detail screen instead.
+
+---
+
+## Original specification v1.0
+
+> **Historical design document.** This specification was implemented in 1.0.0. The "Files to
+> Modify" section is historical: `TaskScreen.kt` was split into `TaskListScreen.kt` and
+> `TaskDetailScreen.kt` and no longer exists. Current behavior is described in
+> [README §4.3](../../README.md#43-presentation-layer--ui-architecture).
+
+
+### Overview
 
 This document specifies the redesigned task UI for the A2D Android app.
 
@@ -36,9 +80,9 @@ No inline expand/collapse or reordering of activity items is used. Items remain 
 
 ---
 
-## 1. Domain & ViewModel
+### 1. Domain & ViewModel
 
-### Task completion rule
+#### Task completion rule
 
 A task is considered completed when:
 
@@ -53,7 +97,7 @@ This logic should be implemented in:
 
 The existing implementation already uses this pattern. [1]
 
-### ViewModel operations
+#### ViewModel operations
 
 The shared `TaskViewModel` (or separate ViewModels per screen) must expose:
 
@@ -74,9 +118,9 @@ No sorting or reordering logic is needed; items are displayed in ID order.
 
 ---
 
-## 2. Task List Screen
+### 2. Task List Screen
 
-### Task Card Layout (compact)
+#### Task Card Layout (compact)
 
 Each task card shows:
 
@@ -123,7 +167,7 @@ Behavior:
   - Calls `addActivity(taskId)`.
   - New item appears at the end of the list (by ID order).
 
-### Activity row styling
+#### Activity row styling
 
 For each activity item:
 
@@ -151,7 +195,7 @@ For each activity item:
 
 The activity list uses a `LazyColumn` with a max height constraint to allow internal scrolling when the list is long.
 
-### Empty state
+#### Empty state
 
 When a task has no activities:
 
@@ -161,9 +205,9 @@ When a task has no activities:
 
 ---
 
-## 3. Task Detail Screen (full-screen)
+### 3. Task Detail Screen (full-screen)
 
-### Navigation
+#### Navigation
 
 - Full-screen Compose destination.
 - Receives `taskId: Long` as a parameter.
@@ -171,7 +215,7 @@ When a task has no activities:
 
 ---
 
-### Header
+#### Header
 
 At the top of the detail screen:
 
@@ -212,7 +256,7 @@ Use a `Row` or `AssistChip` to show the badge next to the title/description.
 
 ---
 
-### Activity List
+#### Activity List
 
 - Displayed as a `LazyColumn`.
 - Shows all activity items for the task in **original order by ID**.
@@ -232,7 +276,7 @@ Styling is identical to the task list screen.
 
 ---
 
-### Task-level delete
+#### Task-level delete
 
 - A task delete button (e.g. trash icon or “Delete task” text button) is shown in the header or top app bar.
 - Tapping it opens a confirmation dialog:
@@ -242,7 +286,7 @@ Styling is identical to the task list screen.
 
 ---
 
-### Add Activity Button
+#### Add Activity Button
 
 - Placed **below** the activity list.
 - Label: “Add activity” with a `+` icon.
@@ -270,9 +314,9 @@ No extra hint text is shown.
 
 ---
 
-## 4. Confirmation Dialogs
+### 4. Confirmation Dialogs
 
-### Task delete dialog
+#### Task delete dialog
 
 Used in both list and detail views.
 
@@ -289,7 +333,7 @@ Behavior:
 - On confirm: call `deleteTask(taskId)`.
 - In detail view, navigate back to the task list after deletion.
 
-### Activity delete dialog
+#### Activity delete dialog
 
 Used in both list and detail views.
 
@@ -307,9 +351,9 @@ Behavior:
 
 ---
 
-## 5. UI Architecture
+### 5. UI Architecture
 
-### Screens
+#### Screens
 
 - `TaskListScreen`:
   - Shows a `LazyColumn` of compact task cards.
@@ -328,7 +372,7 @@ Behavior:
     - Task delete button.
     - “Add activity” button.
 
-### Navigation
+#### Navigation
 
 Using Jetpack Navigation:
 
@@ -346,9 +390,9 @@ Using Jetpack Navigation:
 
 ---
 
-## 6. Implementation Notes
+### 6. Implementation Notes
 
-### Compose components
+#### Compose components
 
 Suggested decomposition:
 
@@ -362,7 +406,7 @@ Suggested decomposition:
   - `ActivityRow(...)` (shared or duplicated)
   - `AddActivityButton(onClick)`
 
-### State handling
+#### State handling
 
 - Use `StateFlow<List<Task>>` from the ViewModel.
 - For the detail screen, derive `currentTask` as:
@@ -373,7 +417,7 @@ Suggested decomposition:
   ```
 - All mutations go through ViewModel methods to keep business logic out of composables.
 
-### Theming
+#### Theming
 
 - Use Material 3 components:
   - `ElevatedCard` for task cards.
@@ -383,14 +427,13 @@ Suggested decomposition:
 
 ---
 
-## 7. Files to Modify
+### 7. Files to Modify
 
 Based on the existing implementation: [1]
 
 - `A2D/app/src/main/java/com/a2d/app/ui/task/TaskScreen.kt`
-  - Refactor into:
-    - `TaskListScreen.kt` (list view)
-    - `TaskDetailScreen.kt` (detail view)
+  - **Historical target — this file has been removed.** The implementation now lives in
+    `TaskListScreen.kt` (list view) and `TaskDetailScreen.kt` (detail view).
 - `A2D/app/src/main/java/com/a2d/app/ui/task/TaskViewModel.kt`
   - Add/update:
     - `toggleActivity(...)`
@@ -405,7 +448,7 @@ No Room schema changes are required; the existing `TaskEntity` / `ActionItemEnti
 
 ---
 
-## 8. Summary of Behaviors
+### 8. Summary of Behaviors
 
 - Task list:
   - Compact cards with activities, checkboxes, delete icons, and “Add activity”.
@@ -422,3 +465,6 @@ No Room schema changes are required; the existing `TaskEntity` / `ActionItemEnti
 - No reordering; items stay in ID order.
 - Done items: strikethrough + slight fade.
 - Confirmation dialogs for all delete operations.
+
+
+---

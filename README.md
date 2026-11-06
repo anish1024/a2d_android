@@ -1,4 +1,33 @@
-# Porting A2D (Adult ADHD Assistant) to Native Android with Hierarchical Serial AND-Gate Logic Integration
+# A2D (Adult ADHD Assistant) — Native Android
+
+> **Canonical current-state documentation.** This file is the source of truth for architecture,
+> current behavior, toolchain, and deployment. It does not accumulate milestone logs, completed
+> specifications, or decision rationale; those live in the linked documents below.
+>
+> - **Last verified:** 2026-11-06 · code baseline `8d3b7f4`
+> - New to the project or making a small targeted change? Start with [`AGENT.md`](AGENT.md).
+> - Implementation history: [`docs/history/implementation-log.md`](docs/history/implementation-log.md)
+> - Completed feature records: [`docs/features/`](docs/features/)
+> - Architecture decisions: [`docs/adr/`](docs/adr/)
+> - Release notes: [`CHANGELOG.md`](CHANGELOG.md)
+> - Documentation index: [`docs/INDEX.md`](docs/INDEX.md)
+> - Device setup and installation: [`Deployment/a2d_build.md`](Deployment/a2d_build.md) and
+>   [`Deployment/a2d_deploy.sh`](Deployment/a2d_deploy.sh).
+> - Historical/superseded documents: [`docs/archive/`](docs/archive/).
+
+## Contents
+
+**Current state**
+
+1. [Executive Summary](#1-executive-summary)
+2. [Core Architectural Concept: Hierarchical Logic Gating](#2-core-architectural-concept-hierarchical-logic-gating)
+3. [Technology Stack](#3-technology-stack)
+4. [Component Mapping & Domain Implementation](#4-component-mapping--domain-implementation)
+5. [Verification & Unit Testing](#5-verification--unit-testing)
+6. [Implementation Status](#6-implementation-status)
+7. [Repository Map](#7-repository-map)
+8. [Deployment](#8-deployment)
+9. [Documentation & History](#9-documentation--history)
 
 ---
 
@@ -62,6 +91,9 @@ Instead of treating `SerialAndGateProcessor` as an isolated utility, the domain 
 | **Persistence** | Room (SQLite) | Relational database enforcing `CASCADE` deletion from `Task` to `ActionItem`, replacing flat-file JSON serialization (`task.json`).|
 | **Data Streams** | Kotlin Coroutines & `Flow` / `StateFlow` | Asynchronous propagation from Room transactions through the logic gate to UI rendering. |
 | **DI** | Dagger Hilt | Manages lifecycle scoping across repositories, engines, and ViewModels. |
+
+The rationale and alternatives for these choices are recorded in
+[ADR 0001 — Technology Stack Selection](docs/adr/0001-technology-stack.md).
 
 ---
 
@@ -311,13 +343,15 @@ data class ActionItemEntity(
 
 ### 4.3 Presentation Layer & UI Architecture
 
-The presentation layer connects the two-tier logic gate to Jetpack Compose:
+The presentation layer connects the two-tier logic gate to Jetpack Compose through the shared
+`TaskViewModel`. There are two task screens (`TaskListScreen` and `TaskDetailScreen`) plus the
+standalone `LogicGateScreen`:
 
 ```
-TaskScreen User Interaction (Check Item)
+TaskListScreen / TaskDetailScreen (checkbox, add, delete)
                  │
                  ▼
-        TaskViewModel.toggleActionItem()
+        TaskViewModel.toggleActivity(taskId, activityId, achieved)
                  │
         ┌────────┴───────────────────────────┐
         ▼                                    ▼
@@ -327,7 +361,7 @@ Tier 1: Task.processActivityWithGate()   TaskRepository.saveTask()
 Tier 2: PipelineProcessor.evaluateTaskList() Room Database Update
         │                                    │
         ▼                                    ▼
-StateFlow<milestoneOutput>            Flow<List<Task>>
+StateFlow<milestoneOutput>            Flow<List<Task>> / StateFlow<Task?>
         │                                    │
         └─────────────────┬──────────────────┘
                           ▼
@@ -335,10 +369,17 @@ StateFlow<milestoneOutput>            Flow<List<Task>>
 
 ```
 
-* **Visual Gate Latching:** Each task card displays an interactive pulse latch indicator (e.g., `[ 1 / 3 Latched ]`).
-
-
-* **Milestone Output Badge:** The top app bar indicates whether the session threshold has been cleared (`Milestone Gate: ACTIVE / 1` vs `LATCHING / 0`).
+* **Completion rule in the UI:** `Task.isCompleted` is
+  `activities.isNotEmpty() && activities.all { it.achieved }`. The detail screen shows a
+  "Completed" / "In progress" badge; the list screen uses the shared `ActivityRow` checkbox and
+  strikethrough styling.
+* **Milestone output:** The list header shows `Milestone Complete [GATE 1]` /
+  `Milestone Incomplete [GATE 0]` from the Tier-2 pipeline (`milestoneOutput`).
+* **No per-card "latched inputs" widget:** the UI does not currently render a `[ 1 / 3 Latched ]`
+  indicator. The gate state is observable through the milestone status and through the standalone
+  Logic Gate tab, which displays the full `PulseResult` (pin, pulse, latched inputs, output, reset).
+* **Navigation:** `MainActivity` hosts a `NavHost` with `taskList`, `taskDetail/{taskId}` (Long arg),
+  and `logicGate` routes. The Tasks bottom tab stays selected while on the detail route.
 
 
 
@@ -412,49 +453,125 @@ class IntegratedGateTaskFlowTest {
 
 ---
 
-## 6. Implementation Roadmap
+## 6. Implementation Status
 
-```
-Sprint 1: Engine & Domain Layer
- ├── Implement models (Task, ActionItem, PulseResult)
- ├── Implement SerialAndGateProcessor & TaskListPipelineProcessor
- └── Execute JUnit 4 test suite for gate accumulator mechanics
+All implementation sprints are complete. The only remaining work is manual device onboarding and
+Play Console submission.
 
-Sprint 2: Storage & Persistence (Room)
- ├── Configure Room schemas (TaskEntity, ActionItemEntity with CASCADE)
- ├── Build TaskDao & TaskRepositoryImpl with Flow observers
- └── Wire Hilt modules for database and singleton processor injection
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Sprint 0 — environment & scaffolding | ✅ Complete | JDK 17, Gradle wrapper 8.9, Android SDK 34, config files written |
+| Sprint 1 — domain, engines, tests | ✅ Complete | `SerialAndGateProcessor`, `TaskListPipelineProcessor`, `Task.processActivityWithGate`, 11/11 unit tests |
+| Sprint 2 — Room, repository, DI | ✅ Complete | `TaskEntity` / `ActionItemEntity` CASCADE, `TaskDao`, `TaskRepositoryImpl`, Hilt `AppModule` |
+| Sprint 3 — Compose UI | ✅ Complete | `TaskListScreen`, `TaskDetailScreen`, `LogicGateScreen`, `NavHost`, `TaskViewModel` |
+| Sprint 4.1 — physical device deploy | ⏳ Manual | use `Deployment/a2d_build.md` + `Deployment/a2d_deploy.sh` |
+| Sprint 4.2 — signed release bundle | ✅ Complete (artifact not committed) | `keystore.properties` + release signing/R8 config in `A2D/app/build.gradle.kts`; generate `A2D/a2d-release-key.jks` locally to rebuild |
+| Sprint 4.3 — Play Store submission | ⏳ Manual | requires Play Console account, store assets, declarations |
 
-Sprint 3: Integrated Presentation Layer
- ├── Implement TaskViewModel orchestrating Tier-1 and Tier-2 gate evaluation
- ├── Compose TaskScreen with real-time latch indicators and pulse counters
- └── Compose standalone Logic Gate playground tab for manual signal testing
+**Current verification baseline:** `./gradlew test` → 11 tests (5 domain + 4 gate + 2 integrated),
+`./gradlew assembleDebug` → `A2D/app/build/outputs/apk/debug/app-debug.apk`.
 
-Sprint 4: Hardware Deployment & Testing
- ├── Deploy to physical device via ADB on macOS Monterey (12.7.6)
- └── Profile memory and coroutine dispatchers to ensure zero main-thread hitching
+**Toolchain actually in use:** AGP **8.5.2**, Kotlin **2.0.20**, KSP **2.0.20-1.0.25**, Compose BOM
+**2024.09.02**, Hilt **2.52**, Room **2.6.1**, Gradle wrapper **8.9**, Java **17**. The older
+AGP 8.2.2 / Kotlin 1.9.22 snippets in the archive are historical and must not be copied into the
+current build.
 
-```
 ---
 
-## 7. redesign01 — Task Card Redesign (Completed)
+## 7. Repository Map
 
-Summary of tasks completed under the `redesign01.md` specification (Task Card Redesign v1.0).
-Full per-task progress reports are in `a2d_implementation_log.md` → *Redesign 01* section.
+```
+a2d_android/
+├── README.md                         # Canonical current-state documentation (this file)
+├── AGENT.md                          # Short, task-oriented guide for small local LLM agents
+├── CHANGELOG.md                      # Versioned release notes (Keep a Changelog + SemVer)
+├── manage-docs.md                    # Repository-agnostic documentation rules
+├── .github/
+│   └── pull_request_template.md      # Docs/verification/commit-ID checklist
+├── Deployment/
+│   ├── a2d_build.md                  # Phone/USB debugging checklist
+│   └── a2d_deploy.sh                 # adb discovery → install debug APK → launch app
+├── docs/
+│   ├── INDEX.md                      # Index of every maintained document
+│   ├── known-issues.md               # Active bugs, limitations, and workarounds
+│   ├── adr/
+│   │   ├── _TEMPLATE.md              # Architecture Decision Record template
+│   │   └── 0001-technology-stack.md  # Accepted technology-stack decision
+│   ├── features/
+│   │   ├── _TEMPLATE.md              # Feature/enhancement specification template
+│   │   └── FEAT-0001-task-card-redesign.md
+│   ├── history/implementation-log.md # Historical + current task log, verified commit IDs
+│   ├── a2d_graph.yaml                # Original reference blueprint
+│   ├── setup-adb.sh                  # adb bootstrap helper
+│   └── archive/                      # Superseded/historical Markdown only
+└── A2D/                              # Gradle project root (run ./gradlew here)
+    ├── build.gradle.kts
+    ├── settings.gradle.kts           # rootProject.name = "A2DApp"
+    ├── gradle.properties             # 2 GB JVM cap
+    ├── gradle/libs.versions.toml     # single source of truth for versions
+    ├── keystore.properties           # release signing config (tracked)
+    └── app/src/
+        ├── main/java/com/a2d/app/
+        │   ├── A2DApplication.kt
+        │   ├── domain/               # models, contracts, gate engines
+        │   ├── data/                 # Room entities/DAO/relation + repository
+        │   ├── di/AppModule.kt       # database + DAO providers
+        │   └── ui/                   # MainActivity, task screens, logic gate, theme
+        └── test/java/com/a2d/app/    # JVM unit tests
+```
 
-| # | Task | Status | What was delivered |
-| --- | --- | --- | --- |
-| T1 | Domain completion rule & ID ordering | ✅ | `Task.isCompleted` = `activities.isNotEmpty() && activities.all { it.achieved }`; `TaskRepositoryImpl` maps activities with `.sortedBy { it.id }` (all 3 query methods) so items always render in ID order; 3 new unit tests in `TaskDomainTest` |
-| T2 | ViewModel operations | ✅ | `TaskViewModel` now exposes `tasks`, `currentTask: StateFlow<Task?>` (derived via `combine(tasks, selectedTaskId)`), `selectTask(taskId)`, and the spec operations `toggleActivity(taskId, activityId, achieved)`, `addActivity(taskId)`, `deleteActivity(taskId, activityId)`, `deleteTask(taskId)` — all Room-backed with Tier-1 gate re-evaluation and Tier-2 pipeline recalculation |
-| T3 | Jetpack Navigation | ✅ | Added `androidx.navigation:navigation-compose:2.8.2` (+ `material-icons-core`); `MainActivity` now hosts a `NavHost` with routes `taskList`, `taskDetail/{taskId}` (Long arg) and `logicGate`; bottom tabs retained, Tasks tab stays active on the detail route |
-| T4 | TaskListScreen | ✅ | Compact `ElevatedCard` per task: × task-delete in header, optional description, checkbox activity list (strikethrough + 60 % fade when done), per-activity 🗑 delete, `+ Add activity` button; activity list capped at 200 dp for internal scrolling; card body taps open the detail screen; both deletes use confirmation `AlertDialog`s. Replaces the old `TaskScreen.kt` (removed) |
-| T5 | TaskDetailScreen | ✅ | Full-screen view: back arrow (`navigateUp()`), task header with green "Completed" / neutral "In progress" badge pill, full activity list with shared `ActivityRow`, task-delete button in the top bar (confirm → delete + navigate back), `+ Add activity` below the list, loading indicator while the task flow resolves |
-| T6 | Verification | ✅ | `./gradlew test` → **11/11 tests pass**; `./gradlew assembleDebug` → BUILD SUCCESSFUL (`app-debug.apk`, 10.3 MB). No Room schema changes required |
-| T7 | Documentation | ✅ | This README section + per-task entries in `a2d_implementation_log.md` |
+**Important:** the Gradle project is under `A2D/`, not the repository root. Run
+`cd A2D && ./gradlew ...`. `A2D/local.properties` is git-ignored; create it with
+`sdk.dir=/path/to/android-sdk` or export `ANDROID_HOME`/`ANDROID_SDK_ROOT`.
 
-**Behavior notes**
+---
 
-- Completion rule used everywhere in the UI: a task is completed only when it has **at least one** activity and **all** activities are checked (the empty task is *not* completed — distinct from the Tier-1 gate's `achieved` flag, which is kept for the milestone pipeline).
-- All delete operations (task-level and per-activity, in both list and detail views) require confirmation via `AlertDialog`.
-- Activities are never reordered — they always display in original ID order; new activities append at the end (globally unique monotonic IDs).
-- No inline expand/collapse of activity items; tapping a card navigates to the detail screen instead.
+## 8. Deployment
+
+Device preparation is documented in [`Deployment/a2d_build.md`](Deployment/a2d_build.md).
+
+```bash
+# 1. Build the debug APK
+cd A2D
+./gradlew assembleDebug
+
+# 2. From the repository root, install and launch
+cd ..
+./Deployment/a2d_deploy.sh
+```
+
+`Deployment/a2d_deploy.sh`:
+
+- locates `adb` via `PATH`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, or common SDK locations;
+- resolves the APK relative to the script (`A2D/app/build/outputs/apk/debug/app-debug.apk`), so it
+  works from any checkout location or current directory;
+- refuses to continue when no authorized device is connected, with a fix checklist;
+- installs with `adb install -r`, then launches `com.a2d.app/.ui.MainActivity`.
+
+Release bundle (requires the git-ignored `A2D/a2d-release-key.jks` to exist locally):
+
+```bash
+cd A2D
+./gradlew bundleRelease
+# → app/build/outputs/bundle/release/app-release.aab
+```
+
+---
+
+## 9. Documentation & History
+
+Current-state documentation lives in this README. Everything else has a single home:
+
+| Topic | Document |
+| --- | --- |
+| Milestone/task history, verification, commit IDs | [`docs/history/implementation-log.md`](docs/history/implementation-log.md) |
+| Completed feature specifications | [`docs/features/FEAT-0001-task-card-redesign.md`](docs/features/FEAT-0001-task-card-redesign.md) |
+| Architecture decisions and technology rationale | [`docs/adr/0001-technology-stack.md`](docs/adr/0001-technology-stack.md) |
+| Versioned release notes | [`CHANGELOG.md`](CHANGELOG.md) |
+| Bugs, limitations, workarounds | [`docs/known-issues.md`](docs/known-issues.md) |
+| Documentation rules and conventions | [`manage-docs.md`](manage-docs.md) |
+| Full document index | [`docs/INDEX.md`](docs/INDEX.md) |
+| Historical/superseded docs | [`docs/archive/`](docs/archive/) |
+
+**Rule:** README describes what is true now. It does not accumulate milestone logs, completed
+specifications, or decision rationale; those belong in the linked documents.

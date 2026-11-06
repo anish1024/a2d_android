@@ -1,5 +1,8 @@
 # A2D Android Environment Setup — Verified Runbook
 
+> **Status: Archived (2026-11-06).** Superseded/historical material, kept for history only. Do not use
+> it as current guidance; see [README.md](../../README.md) and [docs/INDEX.md](../INDEX.md).
+
 Steps in the exact order that produced a successful `./gradlew assembleDebug`
 on this machine (macOS x86_64, Homebrew at `/usr/local`, no pre-existing Java
 or Android tooling). Verified: **BUILD SUCCESSFUL**, APK at

@@ -1,5 +1,8 @@
 # Agent Instructions: Android Development Environment Setup & Hello-World Verification
 
+> **Status: Archived (2026-11-06).** Superseded/historical material, kept for history only. Do not use
+> it as current guidance; see [README.md](../../README.md) and [docs/INDEX.md](../INDEX.md).
+
 You are an expert Android engineer. Your task is to set up a clean, modern native Android project that matches the technology stack defined in the A2D (Adult ADHD Assistant) Android port proposal, then verify the environment by generating and building a minimal Jetpack Compose "Hello World" application.
 
 ## 1. Target Technology Stack (must follow exactly)
