@@ -84,7 +84,7 @@ too small to need it, and the omission must be recorded in the repository profil
 | **Operations** | `docs/operations/` or `Deployment/` | Setup, deployment, runbooks, device or environment prerequisites | Deployment flow, environment, or operations procedure changes |
 | **Known issues** | `docs/known-issues.md` | Recurring bugs, limitations, and workarounds | A bug recurs or needs a workaround |
 | **Release notes** | `CHANGELOG.md` | Versioned, user-facing and technical changes for every release | Every version bump and release |
-| **History** | `docs/history/implementation-log.md` (+ shards) | Internal task/milestone record with verification and commit IDs | Any code change or completed task |
+| **History** | `docs/history/implementation-log.md` (index) + `docs/history/implementation-log/` (shards) | Internal task/milestone record with verification and commit IDs | Any code change or completed task |
 | **Archive** | `docs/archive/` | Superseded or historical material, never current guidance | A document becomes obsolete or is replaced |
 
 ---
@@ -113,7 +113,8 @@ the repository profile.
 │   ├── operations/               # runbooks, deployment, environment setup
 │   ├── known-issues.md
 │   ├── history/
-│   │   └── implementation-log.md
+│   │   ├── implementation-log.md      # rules, index, recent entries (router)
+│   │   └── implementation-log/        # dated shards (YYYY-MM.md, YYYY-QN.md)
 │   └── archive/                  # superseded docs; never current guidance
 └── ...                           # source tree
 ```
@@ -145,7 +146,7 @@ replace those values, do not treat them as defaults.
 | Artifact path | Where build output is written | `A2D/app/build/outputs/` |
 | Deployment docs | Setup and install/launch documentation | `Deployment/a2d_build.md`, `Deployment/a2d_deploy.sh` |
 | Platform / release target | Store, package format, or deployment channel | Android / Play Store (AAB) |
-| Implementation log | Path to the task log | `docs/history/implementation-log.md` |
+| Implementation log | Router + shard directory | `docs/history/implementation-log.md` + `docs/history/implementation-log/` |
 | Known issues | Path to the issue register | `docs/known-issues.md` |
 | Doc check command | Link/anchor/fence check, or `manual` | `manual` (run before docs commits) |
 | Default branch | Branch releases are cut from | `main` |
@@ -274,6 +275,10 @@ Even then, `CHANGELOG.md` remains the canonical version list and links to the ri
 Every code change gets one entry in `docs/history/implementation-log.md`. The entry is the internal
 record: what changed, where, how it was verified, and which commit contains it.
 
+`docs/history/implementation-log.md` is the **router**: rules, entry template, and index table. New
+entries go into dated shards under `docs/history/implementation-log/` (see §10.1 for split rules and
+budgets).
+
 ### 7.1 Entry fields
 
 At minimum, an entry records:
@@ -364,7 +369,7 @@ to them from `docs/INDEX.md`; copies drift.
 | Feature record | `docs/features/_TEMPLATE.md` | Status, owner, last updated, related, target version | Problem, proposed behavior, scope/non-goals, affected files, test plan, docs to update, risks |
 | ADR | `docs/adr/_TEMPLATE.md` | Status, date, owner, supersedes/superseded by | Context, decision, consequences, alternatives considered |
 | Known issue | `docs/known-issues.md` → issue template | Status, first seen, affected versions | Symptom, root cause, workaround, fix/regression test |
-| Implementation log | `docs/history/implementation-log.md` → entry template | Status, files, behavior, verification, commit | See §7.1 |
+| Implementation log | `docs/history/implementation-log.md` → entry template | Status, files, behavior, verification, commit | See §7.1; see §10.1 for shard routing |
 | Changelog | `CHANGELOG.md` → `[Unreleased]` | Version identifiers in each released heading | Added, changed, fixed, removed, security, release notes, build & verification |
 
 If a repository uses a different template location, record it in the repository profile and update
@@ -456,6 +461,8 @@ Use this when applying the policy to a repository for the first time.
 - [ ] Create `CHANGELOG.md` with an `[Unreleased]` section.
 - [ ] Create `docs/INDEX.md` and list every maintained document.
 - [ ] Create `docs/history/implementation-log.md` with the entry template and commit-ID rule.
+- [ ] Create shard files under `docs/history/implementation-log/` (e.g., `YYYY-MM.md`, `YYYY-QN.md`)
+      and add the history index table to the log router when history exceeds the §10.1 budget.
 - [ ] Create `docs/features/_TEMPLATE.md` and `docs/adr/_TEMPLATE.md`.
 - [ ] Create `docs/known-issues.md` with the escalation rule and issue template.
 - [ ] Create `docs/archive/` and move superseded documents there with `Archived` banners.
@@ -476,7 +483,7 @@ Run this before a release, after a major refactor, or at a fixed interval (for e
 - [ ] `README.md` is still current-state only; history and specs live in their own documents.
 - [ ] `CHANGELOG.md` has a section matching every released version and the current version source.
 - [ ] Implementation-log entries with a SHA have green verification for that exact commit.
-- [ ] History shards are within the token budget and the history index links each shard.
+- [ ] History shards are within the token budget (see §10.1) and the history index links each shard.
 - [ ] Archived documents have banners and are not linked as current guidance.
 - [ ] Status, owner, and last-updated values are accurate.
 - [ ] Repository-profile commands and paths still exist and still work.
