@@ -1,0 +1,7 @@
+# Deployment-local state and secrets.
+.env
+.env.*
+!.env.example
+logs/
+*.log
+.backup.lock/

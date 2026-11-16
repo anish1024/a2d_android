@@ -7,7 +7,7 @@ Entry point for every maintained document. Status values follow
 
 - Status: Current
 - Owner: project maintainer
-- Last updated: 2026-11-06
+- Last updated: 2026-11-16
 - Last verified against: code baseline `8d3b7f4`
 
 ## Project documents
@@ -27,6 +27,7 @@ Entry point for every maintained document. Status values follow
 | --- | --- | --- | --- |
 | [Deployment/a2d_build.md](../Deployment/a2d_build.md) | Current | Phone/USB debugging and device setup checklist | 2026-11-06 |
 | [Deployment/a2d_deploy.sh](../Deployment/a2d_deploy.sh) | Current | `adb` discovery, debug APK install, app launch | 2026-11-06 |
+| [Deployment/a2d-cloud/README.md](../Deployment/a2d-cloud/README.md) | Current | Cloud backend deployment runbook: tunnel, deploy/update, invite, backup/restore, retention | 2026-11-16 |
 | [docs/setup-adb.sh](setup-adb.sh) | Current | `adb` bootstrap helper | 2026-10-22 |
 
 ## History and decisions
@@ -35,7 +36,9 @@ Entry point for every maintained document. Status values follow
 | --- | --- | --- | --- |
 | [docs/history/implementation-log.md](history/implementation-log.md) | Current | Historical + current implementation log with verification and commit IDs | 2026-11-06 |
 | [docs/features/FEAT-0001-task-card-redesign.md](features/FEAT-0001-task-card-redesign.md) | Implemented | Delivered task-card redesign summary + original specification | 2026-11-06 |
+| [docs/features/FEAT-0002-cloud-sync.md](features/FEAT-0002-cloud-sync.md) | Accepted | Cloud replica: two-watermark table-to-table row sync with row-count parity, per-user folders + tasks.db, FastAPI API, Cloudflare Tunnel, web UI, required import/export | 2026-11-16 |
 | [docs/adr/0001-technology-stack.md](adr/0001-technology-stack.md) | Accepted | Technology stack decision and architectural rationale | 2026-11-06 |
+| [docs/adr/0002-cloud-sync-architecture.md](adr/0002-cloud-sync-architecture.md) | Accepted | Cloud sync, data contract, Cloudflare Tunnel ingress, and cloud import/export decisions | 2026-11-16 |
 | [docs/known-issues.md](known-issues.md) | Current | Active bugs, limitations, and workarounds | 2026-11-06 |
 | [docs/adr/_TEMPLATE.md](adr/_TEMPLATE.md) | Template | Architecture Decision Record template | 2026-11-06 |
 | [docs/features/_TEMPLATE.md](features/_TEMPLATE.md) | Template | Feature/enhancement specification template | 2026-11-06 |

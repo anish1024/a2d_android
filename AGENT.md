@@ -47,7 +47,7 @@ A2D/app/src/main/java/com/a2d/app/
 │   ├── model/ActionItem.kt           # Checklist item (id, description, achieved)
 │   ├── model/ActivityAchieved.kt     # achieved property contract
 │   ├── model/PulseResult.kt          # Gate result DTO
-│   ├── model/User.kt, UserGroup.kt   # Auth model stubs only (no login UI)
+│   ├── model/User.kt, UserGroup.kt   # Auth model stubs + login UI
 │   ├── contract/ActivityProcessor.kt # processActivity contract
 │   ├── engine/SerialAndGateProcessor.kt      # Gate accumulator (pin arity)
 │   └── engine/TaskListPipelineProcessor.kt   # Tier-2 task-list gate

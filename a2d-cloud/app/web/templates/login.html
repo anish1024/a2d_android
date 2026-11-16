@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>A2D Cloud Login</title>
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+    <div class="login-card">
+        <h1>Welcome to A2D</h1>
+        <p>Enter your email to continue.</p>
+        <form id="login-form" method="POST" action="/auth/login">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="you@example.com" required>
+            <button type="submit">Continue with Email</button>
+        </form>
+    </div>
+</body>
+</html>

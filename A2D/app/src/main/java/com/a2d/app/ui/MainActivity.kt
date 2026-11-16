@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.a2d.app.ui.logicgate.LogicGateScreen
 import com.a2d.app.ui.logicgate.LogicGateViewModel
+import com.a2d.app.ui.login.LoginScreen
 import com.a2d.app.ui.task.TaskDetailScreen
 import com.a2d.app.ui.task.TaskListScreen
 import com.a2d.app.ui.task.TaskViewModel
@@ -32,42 +33,55 @@ class MainActivity : ComponentActivity() {
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
                 val onTaskList = currentRoute == "taskList" || currentRoute?.startsWith("taskDetail/") == true
+                val onLogin = currentRoute == "login"
 
                 Scaffold(
                     bottomBar = {
-                        NavigationBar {
-                            NavigationBarItem(
-                                selected = onTaskList,
-                                onClick = {
-                                    navController.navigate("taskList") {
-                                        popUpTo("taskList") { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                label = { Text("Tasks") },
-                                icon = {}
-                            )
-                            NavigationBarItem(
-                                selected = currentRoute == "logicGate",
-                                onClick = {
-                                    navController.navigate("logicGate") {
-                                        popUpTo("taskList") { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                label = { Text("Logic Gate") },
-                                icon = {}
-                            )
+                        if (!onLogin) {
+                            NavigationBar {
+                                NavigationBarItem(
+                                    selected = onTaskList,
+                                    onClick = {
+                                        navController.navigate("taskList") {
+                                            popUpTo("taskList") { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    label = { Text("Tasks") },
+                                    icon = {}
+                                )
+                                NavigationBarItem(
+                                    selected = currentRoute == "logicGate",
+                                    onClick = {
+                                        navController.navigate("logicGate") {
+                                            popUpTo("taskList") { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    label = { Text("Logic Gate") },
+                                    icon = {}
+                                )
+                            }
                         }
                     }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = "taskList",
+                        startDestination = "login",
                         modifier = Modifier.padding(innerPadding)
                     ) {
+                        composable("login") {
+                            LoginScreen(
+                                onContinue = {
+                                    navController.navigate("taskList") {
+                                        popUpTo("login") { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
                         composable("taskList") {
                             val taskVm: TaskViewModel = hiltViewModel()
                             val tasks by taskVm.tasks.collectAsState()
