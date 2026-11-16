@@ -56,3 +56,32 @@ def test_login_invalid_email(client: TestClient):
 def test_login_missing_fields(client: TestClient):
     r = client.post("/v1/auth/login", data={"password": "test123"})
     assert r.status_code == 422
+
+
+def test_refresh_token(client: TestClient):
+    """Refresh access token using a valid bearer token."""
+    # Login first
+    r = client.post(
+        "/v1/auth/login",
+        data={"email": "test@example.com", "password": "test123"},
+    )
+    assert r.status_code == 200
+    access_token = r.json()["access_token"]
+
+    # Refresh
+    r2 = client.get(
+        "/v1/auth/refresh",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert r2.status_code == 200
+    data = r2.json()
+    assert data["token_type"] == "bearer"
+    assert "access_token" in data and data["access_token"]
+    assert "refresh_token" in data and data["refresh_token"]
+    assert data["expires_in"] > 0
+    assert data["user_id"]
+
+
+def test_refresh_unauthorized(client: TestClient):
+    r = client.get("/v1/auth/refresh")
+    assert r.status_code == 401

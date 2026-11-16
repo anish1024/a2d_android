@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.control_db import init_control_db
 from app.tenant import init_tenant_store
 from app.api.auth import router as auth_router
+from app.api.sync import router as sync_router
 
 
 settings = get_settings()
@@ -30,22 +31,19 @@ app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
 
 # API routes
 app.include_router(auth_router)
-
+app.include_router(sync_router)
 
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
 
-
 @app.get("/readyz")
 async def readyz():
     return {"status": "ready"}
 
-
 @app.get("/login")
 async def login_page():
     return FileResponse("app/web/templates/login.html")
-
 
 @app.get("/")
 async def root():

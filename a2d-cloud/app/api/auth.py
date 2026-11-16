@@ -3,12 +3,13 @@ import re
 import time
 import secrets
 
-from fastapi import APIRouter, Form, HTTPException
+from fastapi import APIRouter, Form, HTTPException, Header, Depends
 from sqlalchemy import text
 
 from app.control_db import get_control_session
 from app.security import verify_password, generate_token
 from app.config import get_settings
+from app.api.dependencies import get_current_user
 
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -60,4 +61,33 @@ async def login(email: str = Form(...), password: str = Form(...)):
         "expires_in": settings.access_token_ttl_seconds,
         "user_id": user_id,
         "email": user_email,
+    }
+
+
+@router.get("/refresh")
+async def refresh_token(user: dict = Depends(get_current_user)):
+    """Issue a fresh access + refresh token for an authenticated user.
+
+    The caller must present a valid Bearer access token. This rotates the
+    short-lived access token (and issues a new refresh token) so a worker can
+    keep syncing without re-entering credentials.
+    """
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token missing user id")
+
+    device_id = user.get("device_id", "")
+    access_token = generate_token(
+        user_id, device_id=device_id, ttl_seconds=settings.access_token_ttl_seconds
+    )
+    refresh_token = generate_token(
+        user_id, device_id=device_id, ttl_seconds=settings.refresh_token_ttl_seconds
+    )
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": settings.access_token_ttl_seconds,
+        "user_id": user_id,
     }

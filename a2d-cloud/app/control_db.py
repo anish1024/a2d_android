@@ -107,6 +107,13 @@ def init_control_db():
                 applied_at INTEGER NOT NULL
             )
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS idempotency_keys (
+                key TEXT PRIMARY KEY,
+                response_json TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+        """))
         conn.commit()
 
 

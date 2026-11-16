@@ -139,8 +139,14 @@ class TenantStore:
 
     @contextmanager
     def tenant_session(self, user_id: str) -> Generator[Session, None, None]:
-        """Get a SQLAlchemy session for a tenant database."""
+        """Get a SQLAlchemy session for a tenant database.
+
+        Provisions the tenant on first use so callers need not call
+        provision_tenant() explicitly.
+        """
         db_path = self.tenant_db_path(user_id)
+        if not pathlib.Path(db_path).exists():
+            self.provision_tenant(user_id)
         engine = create_engine(
             f"sqlite:///{db_path}",
             connect_args={"check_same_thread": False},
