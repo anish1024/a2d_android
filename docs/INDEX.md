@@ -7,8 +7,8 @@ Entry point for every maintained document. Status values follow
 
 - Status: Current
 - Owner: project maintainer
-- Last updated: 2026-11-16
-- Last verified against: code baseline `8d3b7f4`
+- Last updated: 2026-11-18
+- Last verified against: code baseline `8d9563d`
 
 ## Project documents
 

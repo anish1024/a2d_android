@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.room)
 }
 
 // 1. Load keystore.properties from the root project directory
@@ -20,6 +21,10 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.a2d.app"
     compileSdk = 34
+
+    room {
+        schemaDirectory("schemas")
+    }
 
     defaultConfig {
         applicationId = "com.a2d.app"
@@ -104,6 +109,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

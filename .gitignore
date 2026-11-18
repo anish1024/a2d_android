@@ -29,3 +29,6 @@ test.db-shm
 *.log
 .coverage
 htmlcov/
+
+# Android Room package path ("data/") is not runtime data; keep the Room migration source tracked
+!A2D/app/src/main/java/com/a2d/app/data/local/RoomMigration.kt

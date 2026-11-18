@@ -6,6 +6,7 @@
 - Related: [README §4](../../README.md#4-component-mapping--domain-implementation),
   [README §6](../../README.md#6-implementation-status), [ADR 0001](../adr/0001-technology-stack.md),
   [FEAT-0001](FEAT-0001-task-card-redesign.md), [original FastAPI blueprint](../a2d_graph.yaml)
+- P2: Android Room v2 migration implemented (syncId UUID, `updatedAt`, `deleted`, `dirty` columns; sync metadata backfilled, `dirty=1`, exported schema at `schemas/2.json`); Robolectric test written (native ARM64 lib unavailable in this env).
 - Target version: 1.1.0 (cloud MVP)
 - Decision: [ADR 0002 — Cloud sync architecture](../adr/0002-cloud-sync-architecture.md) (Accepted)
 
@@ -1513,7 +1514,7 @@ Android (JVM, matching the existing suite style):
 - [ ] Row-count check: matching counts for both tables → `Success`; a deliberate mismatch with no
       pending dirty rows → `RowCountMismatch` and a full download on the next run; pending dirty rows
       defer the check.
-- [ ] Room migration 1→2 with Robolectric: UUID backfill on tasks and activities, `dirty=1` on both,
+- [x] Room migration 1→2 with Robolectric: UUID backfill on tasks and activities, `dirty=1` on both,
       UTC conversion, unique indexes, `last_backup_at = 0`/`last_download_at = null`, and a
       successful open against exported `schemas/2.json`.
 - [ ] Dirty marking on every repository mutation in both tables; deleting a task tombstones its

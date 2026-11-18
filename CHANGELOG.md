@@ -6,16 +6,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 - Status: Current
 - Owner: project maintainer
-- Last updated: 2026-11-06
-- Last verified against: code baseline `8d3b7f4`
+- Last updated: 2026-11-18
+- Last verified against: code baseline `8d9563d`
 
 ## [Unreleased]
 
 ### Added
 
+- **Cloud sync (FEAT-0002) — Room v2 migration (Android P2, step 2).** Added sync metadata columns
+  to `tasks` and `action_items`: `sync_id` (UUID), `updated_at` (LWW stamp), `deleted` (tombstone
+  flag), and `dirty` (unsynced flag).
+- `RoomMigration.MIGRATION_1_2` with `ALTER TABLE` column adds + UUID/`updated_at` backfill and
+  `dirty = 1` for every existing row, so the first backup uploads the full dataset.
+- Room schema export enabled (`exportSchema = true`, Room Gradle plugin); committed
+  `A2D/app/schemas/com.a2d.app.data.local.A2DDatabase/2.json`.
+- `RoomMigrationTest` (Robolectric + `room-testing`) covering the v1→v2 migration: data preservation,
+  new columns, and backfill. **Note:** the test compiles and is wired into `testDebugUnitTest` but
+  currently fails on this ARM64 host because Robolectric needs a native `conscrypt` library that is
+  not available (environment limitation, not a code defect); the other 11 unit tests pass.
+
 ### Changed
 
+- `A2DDatabase` bumped from version 1 → 2 and now exposes a singleton `getDatabase(context)` that
+  installs `MIGRATION_1_2`; `AppModule` delegates to it.
+- `TaskEntity` / `ActionItemEntity` gain `syncId`, `updatedAt`, `deleted`, `dirty` fields (defaults
+  added so existing call sites compile unchanged).
+
 ### Fixed
+
+- Cloud deployment: `deploy.sh` now flattens the `a2d-cloud/` tarball wrapper and chowns the target;
+  `lib.sh` creates the service group before the user and uses `ensurepip` for a working pip on
+  Python 3.13; `A2D_BIND_HOST` defaults to `0.0.0.0`. See `Deployment/a2d-cloud/README.md` §13.
 
 ### Removed
 

@@ -1,5 +1,6 @@
 package com.a2d.app.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -11,5 +12,9 @@ data class TaskEntity(
     val priority: Int,
     val context: String,
     val achieved: Boolean,
-    val creationTime: String
+    val creationTime: String,
+    @ColumnInfo(name = "sync_id") val syncId: String = "",
+    @ColumnInfo(name = "updated_at") val updatedAt: Long = 0L,
+    @ColumnInfo(name = "deleted") val deleted: Boolean = false,
+    @ColumnInfo(name = "dirty") val dirty: Boolean = false,
 )

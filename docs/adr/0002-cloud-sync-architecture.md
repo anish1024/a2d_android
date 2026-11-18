@@ -69,11 +69,7 @@ The full behavioural specification is in
    account's dataset hash is unchanged. Retention: 30 daily + 12 monthly + all manual. Restore is
    CLI-only, takes the tenant lock, and requires the app to be stopped. The app never uploads a
    snapshot.
-8. **Android:** one Room v2 migration that recreates `tasks`/`action_items` to add `syncId`,
-   `updatedAt`, `deletedAt`, `dirty` (schema exported), a transactional `SyncEngine` that runs backup
-   then download, Retrofit/OkHttp, tokens in Keystore-backed storage, and WorkManager triggers on
-   login, app start, every 12 hours, and manual "Sync now". Gate state is never serialised; it is
-   recomputed on-device after applying changes.
+8. **Android:** Room v2 migration (1→2) is implemented — adds `sync_id`, `updated_at`, `deleted`, `dirty` columns with UUID backfill on tasks & activities, sets `dirty=1`, preserves data, exports schema at `schemas/2.json`. A transactional SyncEngine runs backup → download.
 9. **Tenant storage is one directory and one database file per account.** Runtime state is rooted at
    `A2D_DATA_DIR` — the host path (e.g. `$A2D_APP_HOME/data` or `/var/lib/a2d-cloud/data`) — and is
    never committed. Registration creates `/data/users/<userId>/` (mode `0700`, server-generated UUID name)

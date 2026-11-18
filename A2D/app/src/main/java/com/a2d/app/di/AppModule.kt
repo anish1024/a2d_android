@@ -1,7 +1,6 @@
 package com.a2d.app.di
 
 import android.content.Context
-import androidx.room.Room
 import com.a2d.app.data.local.A2DDatabase
 import com.a2d.app.data.local.dao.TaskDao
 import dagger.Module
@@ -18,11 +17,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): A2DDatabase {
-        return Room.databaseBuilder(
-            context,
-            A2DDatabase::class.java,
-            "a2d_database.db"
-        ).build()
+        return A2DDatabase.getDatabase(context)
     }
 
     @Provides
