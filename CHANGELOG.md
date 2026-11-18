@@ -36,6 +36,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   `modifier` parameter so the host `Scaffold` can apply its inner padding.
 - `TaskViewModel.syncNow()` now returns a `String` status message so the menu can show feedback
   ("Cloud sync is pending backend integration") until the real `SyncEngine` is wired in.
+- **Task card completion (FEAT-0001 / redesign-02 round 3).** Restored the missing task/activity
+  edit operations and the per-card affordances from the FEAT-0001 spec + Option B:
+  - `TaskViewModel` gained `updateTask(taskId, newName, newDescription)` and
+    `updateActivity(taskId, activityId, newDescription)`; `MainActivity` wires them to the list screen.
+  - `TaskListScreen.TaskCard` gained inline edit mode (Edit/Done icon + name/description fields) and a
+    per-card 3-dot overflow menu (**Export CSV**, **Import CSV**, **Move Up**, **Move Down**, **Delete**);
+    header tap toggles the activity body with internal scrolling.
+  - CSV export/import and move up/down are placeholders (visible Toast feedback) until backend/SAF wiring.
 - `A2DDatabase` bumped from version 1 → 2 and now exposes a singleton `getDatabase(context)` that
   installs `MIGRATION_1_2`; `AppModule` delegates to it.
 - `TaskEntity` / `ActionItemEntity` gain `syncId`, `updatedAt`, `deleted`, `dirty` fields (defaults

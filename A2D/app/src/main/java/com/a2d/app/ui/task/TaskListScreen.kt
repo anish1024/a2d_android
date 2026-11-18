@@ -5,10 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
@@ -20,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.a2d.app.domain.model.ActionItem
 import com.a2d.app.domain.model.Task
@@ -33,11 +38,14 @@ fun TaskListScreen(
     onAddActivity: (Long) -> Unit,
     onDeleteActivity: (Long, Long) -> Unit,
     onDeleteTask: (Long) -> Unit,
+    onSaveEdit: (Long, String, String) -> Unit,
+    onUpdateActivity: (Long, Long, String) -> Unit,
     onCreateSample: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val expandedStates = remember { mutableStateMapOf<Long, Boolean>() }
+    val editingStates = remember { mutableStateMapOf<Long, Boolean>() }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Row(
@@ -45,18 +53,16 @@ fun TaskListScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = if (milestoneOutput == 1) "Milestone Complete [GATE 1]" else "Milestone Incomplete [GATE 0]",
-                    color = if (milestoneOutput == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                Button(onClick = onCreateSample) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("+ Task")
-                }
+            Text(
+                text = if (milestoneOutput == 1) "Milestone Complete [GATE 1]" else "Milestone Incomplete [GATE 0]",
+                color = if (milestoneOutput == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Button(onClick = onCreateSample) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Add Task")
             }
         }
 
@@ -67,8 +73,19 @@ fun TaskListScreen(
                 TaskCard(
                     task = task,
                     isExpanded = expandedStates[task.id] ?: true,
+                    isEditing = editingStates[task.id] ?: false,
                     onHeaderClick = {
                         expandedStates[task.id] = !(expandedStates[task.id] ?: true)
+                    },
+                    onEditingChange = { editing ->
+                        editingStates[task.id] = editing
+                        if (editing) expandedStates[task.id] = true
+                    },
+                    onSaveEdit = { name, description ->
+                        onSaveEdit(task.id, name, description)
+                    },
+                    onUpdateActivity = { activityId, description ->
+                        onUpdateActivity(task.id, activityId, description)
                     },
                     onTaskBodyClick = { onTaskClick(task.id) },
                     onToggleActivity = { activityId, achieved ->
@@ -78,13 +95,9 @@ fun TaskListScreen(
                     onDeleteActivity = { activityId -> onDeleteActivity(task.id, activityId) },
                     onDeleteTask = { onDeleteTask(task.id) },
                     onExportCsv = { exportTaskToCsv(context, task) },
-                    onImportCsv = { /* placeholder for future file picker */ },
-                    onMoveActivityUp = { taskId ->
-                        moveActivity(taskId, true)
-                    },
-                    onMoveActivityDown = { taskId ->
-                        moveActivity(taskId, false)
-                    },
+                    onImportCsv = { showImportPlaceholder(context) },
+                    onMoveActivityUp = { moveActivity(task.id, true) },
+                    onMoveActivityDown = { moveActivity(task.id, false) },
                     modifier = Modifier
                 )
             }
@@ -96,7 +109,11 @@ fun TaskListScreen(
 fun TaskCard(
     task: Task,
     isExpanded: Boolean,
+    isEditing: Boolean,
     onHeaderClick: () -> Unit,
+    onEditingChange: (Boolean) -> Unit,
+    onSaveEdit: (String, String) -> Unit,
+    onUpdateActivity: (Long, String) -> Unit,
     onTaskBodyClick: () -> Unit,
     onToggleActivity: (Long, Boolean) -> Unit,
     onAddActivity: () -> Unit,
@@ -104,14 +121,23 @@ fun TaskCard(
     onDeleteTask: () -> Unit,
     onExportCsv: () -> Unit,
     onImportCsv: () -> Unit,
-    onMoveActivityUp: (Long) -> Unit,
-    onMoveActivityDown: (Long) -> Unit,
+    onMoveActivityUp: () -> Unit,
+    onMoveActivityDown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showTaskDeleteDialog by remember { mutableStateOf(false) }
     var pendingActivityDeleteId by remember { mutableStateOf<Long?>(null) }
     var showMenu by remember { mutableStateOf(false) }
-    var showImportDialog by remember { mutableStateOf(false) }
+
+    var draftName by remember(task.id) { mutableStateOf(task.taskName) }
+    var draftDescription by remember(task.id) { mutableStateOf(task.description) }
+
+    fun exitEditMode() {
+        if (isEditing) {
+            onSaveEdit(draftName, draftDescription)
+            onEditingChange(false)
+        }
+    }
 
     ElevatedCard(modifier = modifier.fillMaxWidth()) {
         Column {
@@ -139,14 +165,15 @@ fun TaskCard(
                     )
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { onDeleteTask() }) {
+                    IconButton(onClick = {
+                        if (isEditing) exitEditMode() else onEditingChange(true)
+                    }) {
                         Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Delete task",
-                            tint = MaterialTheme.colorScheme.error
+                            imageVector = if (isEditing) Icons.Filled.Done else Icons.Filled.Edit,
+                            contentDescription = if (isEditing) "Done editing" else "Edit task"
                         )
                     }
                     IconButton(onClick = { showMenu = true }) {
@@ -179,7 +206,7 @@ fun TaskCard(
                             text = { Text("Move Up") },
                             onClick = {
                                 showMenu = false
-                                onMoveActivityUp(task.id)
+                                onMoveActivityUp()
                             },
                             leadingIcon = { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null) }
                         )
@@ -187,7 +214,7 @@ fun TaskCard(
                             text = { Text("Move Down") },
                             onClick = {
                                 showMenu = false
-                                onMoveActivityDown(task.id)
+                                onMoveActivityDown()
                             },
                             leadingIcon = { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null) }
                         )
@@ -209,7 +236,25 @@ fun TaskCard(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    if (task.description.isNotBlank()) {
+                    if (isEditing) {
+                        OutlinedTextField(
+                            value = draftName,
+                            onValueChange = { draftName = it },
+                            label = { Text("Task name") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = draftDescription,
+                            onValueChange = { draftDescription = it },
+                            label = { Text("Task description") },
+                            minLines = 2,
+                            maxLines = 5,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    } else if (task.description.isNotBlank()) {
                         Text(
                             text = task.description,
                             style = MaterialTheme.typography.bodyMedium,
@@ -262,20 +307,6 @@ fun TaskCard(
                 onDeleteActivity(activityId)
             },
             onDismiss = { pendingActivityDeleteId = null }
-        )
-    }
-
-    if (showImportDialog) {
-        // Placeholder: import UI would be added here later
-        AlertDialog(
-            onDismissRequest = { showImportDialog = false },
-            title = { Text("Import CSV") },
-            text = { Text("Importing activities from CSV is not yet implemented.") },
-            confirmButton = {
-                TextButton(onClick = { showImportDialog = false }) {
-                    Text("OK")
-                }
-            }
         )
     }
 }
@@ -363,18 +394,21 @@ fun ActivityDeleteDialog(
     )
 }
 
-/** Export a task's activities to a CSV file (simplified implementation). */
+/** Export a task's activities to CSV (placeholder until SAF file write is wired). */
 private fun exportTaskToCsv(context: android.content.Context, task: Task) {
-    // Simplified: just log / show toast (real implementation would write file via SAF)
-    Toast.makeText(context, "CSV export: ${task.activities.size} activities", Toast.LENGTH_SHORT).show()
+    Toast.makeText(
+        context,
+        "CSV export: ${task.activities.size} activities (backend integration pending)",
+        Toast.LENGTH_SHORT
+    ).show()
 }
 
-/** Move an activity within its task's activity list. */
+/** Import activities from CSV (placeholder until SAF file pick is wired). */
+private fun showImportPlaceholder(context: android.content.Context) {
+    Toast.makeText(context, "CSV import pending backend integration", Toast.LENGTH_SHORT).show()
+}
+
+/** Move an activity within its task's activity list (placeholder). */
 private fun moveActivity(taskId: Long, up: Boolean) {
-    // Placeholder: real implementation would update Room entities
-}
-
-/** Placeholder for importing activities from CSV. */
-private fun importTaskCsv(taskId: Long, csv: String): Int {
-    return 0
+    // TODO: swap priority/order in Room once ordering is spec'd.
 }

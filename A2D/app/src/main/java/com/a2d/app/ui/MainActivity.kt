@@ -134,6 +134,12 @@ class MainActivity : ComponentActivity() {
                                         taskVm.deleteActivity(taskId, activityId)
                                     },
                                     onDeleteTask = { taskId -> taskVm.deleteTask(taskId) },
+                                    onSaveEdit = { taskId, name, description ->
+                                        taskVm.updateTask(taskId, name, description)
+                                    },
+                                    onUpdateActivity = { taskId, activityId, description ->
+                                        taskVm.updateActivity(taskId, activityId, description)
+                                    },
                                     onCreateSample = {
                                         val newId = System.currentTimeMillis()
                                         taskVm.createSampleTask(newId, "Task #$newId", 1)
