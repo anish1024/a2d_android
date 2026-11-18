@@ -1,5 +1,7 @@
 package com.a2d.app.ui.task
 
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -7,11 +9,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.a2d.app.domain.model.ActionItem
 import com.a2d.app.domain.model.Task
@@ -28,22 +36,27 @@ fun TaskListScreen(
     onCreateSample: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val expandedStates = remember { mutableStateMapOf<Long, Boolean>() }
+
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = if (milestoneOutput == 1) "Milestone Complete [GATE 1]" else "Milestone Incomplete [GATE 0]",
-                color = if (milestoneOutput == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.weight(1f)
-            )
-            Button(onClick = onCreateSample) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(Modifier.width(4.dp))
-                Text("Add Task")
+            Column {
+                Text(
+                    text = if (milestoneOutput == 1) "Milestone Complete [GATE 1]" else "Milestone Incomplete [GATE 0]",
+                    color = if (milestoneOutput == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Button(onClick = onCreateSample) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("+ Task")
+                }
             }
         }
 
@@ -53,13 +66,26 @@ fun TaskListScreen(
             items(tasks, key = { it.id }) { task ->
                 TaskCard(
                     task = task,
-                    onTaskClick = { onTaskClick(task.id) },
+                    isExpanded = expandedStates[task.id] ?: true,
+                    onHeaderClick = {
+                        expandedStates[task.id] = !(expandedStates[task.id] ?: true)
+                    },
+                    onTaskBodyClick = { onTaskClick(task.id) },
                     onToggleActivity = { activityId, achieved ->
                         onToggleActivity(task.id, activityId, achieved)
                     },
                     onAddActivity = { onAddActivity(task.id) },
                     onDeleteActivity = { activityId -> onDeleteActivity(task.id, activityId) },
-                    onDeleteTask = { onDeleteTask(task.id) }
+                    onDeleteTask = { onDeleteTask(task.id) },
+                    onExportCsv = { exportTaskToCsv(context, task) },
+                    onImportCsv = { /* placeholder for future file picker */ },
+                    onMoveActivityUp = { taskId ->
+                        moveActivity(taskId, true)
+                    },
+                    onMoveActivityDown = { taskId ->
+                        moveActivity(taskId, false)
+                    },
+                    modifier = Modifier
                 )
             }
         }
@@ -69,63 +95,152 @@ fun TaskListScreen(
 @Composable
 fun TaskCard(
     task: Task,
-    onTaskClick: () -> Unit,
+    isExpanded: Boolean,
+    onHeaderClick: () -> Unit,
+    onTaskBodyClick: () -> Unit,
     onToggleActivity: (Long, Boolean) -> Unit,
     onAddActivity: () -> Unit,
     onDeleteActivity: (Long) -> Unit,
-    onDeleteTask: () -> Unit
+    onDeleteTask: () -> Unit,
+    onExportCsv: () -> Unit,
+    onImportCsv: () -> Unit,
+    onMoveActivityUp: (Long) -> Unit,
+    onMoveActivityDown: (Long) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showTaskDeleteDialog by remember { mutableStateOf(false) }
     var pendingActivityDeleteId by remember { mutableStateOf<Long?>(null) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showImportDialog by remember { mutableStateOf(false) }
 
-    ElevatedCard(
-        onClick = onTaskClick,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { showTaskDeleteDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Delete task",
-                        tint = MaterialTheme.colorScheme.error
+    ElevatedCard(modifier = modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onHeaderClick() }
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = task.taskName,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = task.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(task.taskName, style = MaterialTheme.typography.titleMedium)
-                    if (task.description.isNotBlank()) {
-                        Text(
-                            task.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { onDeleteTask() }) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Delete task",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "More options"
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Export CSV") },
+                            onClick = {
+                                showMenu = false
+                                onExportCsv()
+                            },
+                            leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import CSV") },
+                            onClick = {
+                                showMenu = false
+                                onImportCsv()
+                            },
+                            leadingIcon = { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Move Up") },
+                            onClick = {
+                                showMenu = false
+                                onMoveActivityUp(task.id)
+                            },
+                            leadingIcon = { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Move Down") },
+                            onClick = {
+                                showMenu = false
+                                onMoveActivityDown(task.id)
+                            },
+                            leadingIcon = { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                showMenu = false
+                                showTaskDeleteDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (isExpanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    if (task.description.isNotBlank()) {
+                        Text(
+                            text = task.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 200.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(task.activities, key = { it.id }) { activity ->
-                    ActivityRow(
-                        activity = activity,
-                        onCheckedChange = { onToggleActivity(activity.id, it) },
-                        onDelete = { pendingActivityDeleteId = activity.id }
-                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(task.activities, key = { it.id }) { activity ->
+                            ActivityRow(
+                                activity = activity,
+                                onCheckedChange = { onToggleActivity(activity.id, it) },
+                                onDelete = { pendingActivityDeleteId = activity.id }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(onClick = onAddActivity) {
+                        Icon(Icons.Filled.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add activity")
+                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(onClick = onAddActivity) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add activity")
             }
         }
     }
@@ -147,6 +262,20 @@ fun TaskCard(
                 onDeleteActivity(activityId)
             },
             onDismiss = { pendingActivityDeleteId = null }
+        )
+    }
+
+    if (showImportDialog) {
+        // Placeholder: import UI would be added here later
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = { Text("Import CSV") },
+            text = { Text("Importing activities from CSV is not yet implemented.") },
+            confirmButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text("OK")
+                }
+            }
         )
     }
 }
@@ -232,4 +361,20 @@ fun ActivityDeleteDialog(
             }
         }
     )
+}
+
+/** Export a task's activities to a CSV file (simplified implementation). */
+private fun exportTaskToCsv(context: android.content.Context, task: Task) {
+    // Simplified: just log / show toast (real implementation would write file via SAF)
+    Toast.makeText(context, "CSV export: ${task.activities.size} activities", Toast.LENGTH_SHORT).show()
+}
+
+/** Move an activity within its task's activity list. */
+private fun moveActivity(taskId: Long, up: Boolean) {
+    // Placeholder: real implementation would update Room entities
+}
+
+/** Placeholder for importing activities from CSV. */
+private fun importTaskCsv(taskId: Long, csv: String): Int {
+    return 0
 }
