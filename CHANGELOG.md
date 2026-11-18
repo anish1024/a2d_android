@@ -27,6 +27,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Changed
 
+- `A2D/app/src/main/java/com/a2d/app/ui/MainActivity.kt`: added a `TopAppBar` on the `taskList` route
+  with a 3-dot overflow menu (`Icons.Filled.MoreVert`). The menu contains the **Sync** action (with a
+  `Refresh` leading icon), wired to the placeholder `TaskViewModel.syncNow()` that returns a status
+  string. This keeps the dashboard header clean and avoids misaligning the milestone / Add Task row.
+- `A2D/app/src/main/java/com/a2d/app/ui/task/TaskListScreen.kt`: removed the standalone "Sync" button
+  from the header; only the icon+text **Add Task** button remains there. The screen now accepts a
+  `modifier` parameter so the host `Scaffold` can apply its inner padding.
+- `TaskViewModel.syncNow()` now returns a `String` status message so the menu can show feedback
+  ("Cloud sync is pending backend integration") until the real `SyncEngine` is wired in.
 - `A2DDatabase` bumped from version 1 → 2 and now exposes a singleton `getDatabase(context)` that
   installs `MIGRATION_1_2`; `AppModule` delegates to it.
 - `TaskEntity` / `ActionItemEntity` gain `syncId`, `updatedAt`, `deleted`, `dirty` fields (defaults

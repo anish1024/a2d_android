@@ -1,12 +1,19 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.a2d.app.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -33,43 +40,42 @@ class MainActivity : ComponentActivity() {
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
                 val onTaskList = currentRoute == "taskList" || currentRoute?.startsWith("taskDetail/") == true
-                val onLogin = currentRoute == "login"
+                // onLogin removed; login is no longer the start destination
+                val context = LocalContext.current
 
                 Scaffold(
                     bottomBar = {
-                        if (!onLogin) {
-                            NavigationBar {
-                                NavigationBarItem(
-                                    selected = onTaskList,
-                                    onClick = {
-                                        navController.navigate("taskList") {
-                                            popUpTo("taskList") { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    label = { Text("Tasks") },
-                                    icon = {}
-                                )
-                                NavigationBarItem(
-                                    selected = currentRoute == "logicGate",
-                                    onClick = {
-                                        navController.navigate("logicGate") {
-                                            popUpTo("taskList") { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    label = { Text("Logic Gate") },
-                                    icon = {}
-                                )
-                            }
+                        NavigationBar {
+                            NavigationBarItem(
+                                selected = onTaskList,
+                                onClick = {
+                                    navController.navigate("taskList") {
+                                        popUpTo("taskList") { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                label = { Text("Tasks") },
+                                icon = {}
+                            )
+                            NavigationBarItem(
+                                selected = currentRoute == "logicGate",
+                                onClick = {
+                                    navController.navigate("logicGate") {
+                                        popUpTo("taskList") { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                label = { Text("Logic Gate") },
+                                icon = {}
+                            )
                         }
                     }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = "login",
+                        startDestination = "taskList",
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable("login") {
@@ -86,26 +92,55 @@ class MainActivity : ComponentActivity() {
                             val taskVm: TaskViewModel = hiltViewModel()
                             val tasks by taskVm.tasks.collectAsState()
                             val milestone by taskVm.milestoneOutput.collectAsState()
+                            var showMenu by remember { mutableStateOf(false) }
 
-                            TaskListScreen(
-                                tasks = tasks,
-                                milestoneOutput = milestone,
-                                onTaskClick = { taskId ->
-                                    navController.navigate("taskDetail/$taskId")
-                                },
-                                onToggleActivity = { taskId, activityId, achieved ->
-                                    taskVm.toggleActivity(taskId, activityId, achieved)
-                                },
-                                onAddActivity = { taskId -> taskVm.addActivity(taskId) },
-                                onDeleteActivity = { taskId, activityId ->
-                                    taskVm.deleteActivity(taskId, activityId)
-                                },
-                                onDeleteTask = { taskId -> taskVm.deleteTask(taskId) },
-                                onCreateSample = {
-                                    val newId = System.currentTimeMillis()
-                                    taskVm.createSampleTask(newId, "Task #$newId", 1)
+                            Scaffold(
+                                topBar = {
+                                    TopAppBar(
+                                        title = { Text("A2D Focus Tasks") },
+                                        actions = {
+                                            IconButton(onClick = { showMenu = true }) {
+                                                Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                                            }
+                                            DropdownMenu(
+                                                expanded = showMenu,
+                                                onDismissRequest = { showMenu = false }
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Sync") },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        val message = taskVm.syncNow()
+                                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) }
+                                                )
+                                            }
+                                        }
+                                    )
                                 }
-                            )
+                            ) { innerPadding ->
+                                TaskListScreen(
+                                    tasks = tasks,
+                                    milestoneOutput = milestone,
+                                    onTaskClick = { taskId ->
+                                        navController.navigate("taskDetail/$taskId")
+                                    },
+                                    onToggleActivity = { taskId, activityId, achieved ->
+                                        taskVm.toggleActivity(taskId, activityId, achieved)
+                                    },
+                                    onAddActivity = { taskId -> taskVm.addActivity(taskId) },
+                                    onDeleteActivity = { taskId, activityId ->
+                                        taskVm.deleteActivity(taskId, activityId)
+                                    },
+                                    onDeleteTask = { taskId -> taskVm.deleteTask(taskId) },
+                                    onCreateSample = {
+                                        val newId = System.currentTimeMillis()
+                                        taskVm.createSampleTask(newId, "Task #$newId", 1)
+                                    },
+                                    modifier = Modifier.padding(innerPadding)
+                                )
+                            }
                         }
                         composable(
                             route = "taskDetail/{taskId}",

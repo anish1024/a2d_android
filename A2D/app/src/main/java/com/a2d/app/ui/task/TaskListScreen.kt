@@ -25,24 +25,25 @@ fun TaskListScreen(
     onAddActivity: (Long) -> Unit,
     onDeleteActivity: (Long, Long) -> Unit,
     onDeleteTask: (Long) -> Unit,
-    onCreateSample: () -> Unit
+    onCreateSample: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text("A2D Focus Tasks", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    text = if (milestoneOutput == 1) "Milestone Complete [GATE 1]" else "Milestone Incomplete [GATE 0]",
-                    color = if (milestoneOutput == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
+            Text(
+                text = if (milestoneOutput == 1) "Milestone Complete [GATE 1]" else "Milestone Incomplete [GATE 0]",
+                color = if (milestoneOutput == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.weight(1f)
+            )
             Button(onClick = onCreateSample) {
-                Text("+ Task")
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Add Task")
             }
         }
 

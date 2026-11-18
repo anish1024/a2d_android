@@ -110,6 +110,20 @@ class TaskViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Triggers a cloud sync attempt.
+     *
+     * Returns a user-facing status string. The real `SyncEngine` is not yet wired (P1), so this
+     * currently returns a placeholder message explaining that cloud sync is pending backend
+     * integration. Once the engine is available, this method will perform the actual backup
+     * (`POST /v1/sync/backup`) and updates (`GET /v1/sync/updates`) round-trip and return a
+     * success/failure summary.
+     */
+    fun syncNow(): String {
+        // TODO: wire to real SyncEngine once P1 backend is available.
+        return "Cloud sync is pending backend integration"
+    }
+
     private suspend fun recalculatePipeline() {
         val currentTasks = repository.getTaskSnapshot()
         val pipelineResult = pipelineProcessor.evaluateTaskList(currentTasks)

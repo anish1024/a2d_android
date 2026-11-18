@@ -26,6 +26,10 @@ android {
         schemaDirectory("schemas")
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.a2d.app"
         minSdk = 26
@@ -35,6 +39,12 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        buildConfigField(
+            "String",
+            "A2D_CLOUD_BASE_URL",
+            "\"https://devapp8000.anisandbox.org\""
+        )
     }
 
     signingConfigs {
