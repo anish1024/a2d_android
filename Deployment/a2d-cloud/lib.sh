@@ -24,7 +24,7 @@ A2D_DATA_DIR="${A2D_DATA_DIR:-$A2D_APP_HOME/data}"
 A2D_RUN_USER="${A2D_RUN_USER:-a2dcloud}"
 A2D_RUN_GROUP="${A2D_RUN_GROUP:-$A2D_RUN_USER}"
 A2D_LOG_DIR="${A2D_LOG_DIR:-/var/log/a2d-cloud}"
-A2D_BIND_HOST="${A2D_BIND_HOST:-127.0.0.1}"
+A2D_BIND_HOST="${A2D_BIND_HOST:-0.0.0.0}"
 A2D_BIND_PORT="${A2D_BIND_PORT:-8000}"
 
 # System supervisord drop-in that deploy.sh writes.
@@ -35,6 +35,36 @@ export A2D_ENV_FILE="$ENV_FILE"
 log()  { printf '[a2d-cloud] %s\n' "$*"; }
 warn() { printf '[a2d-cloud] WARNING: %s\n' "$*" >&2; }
 die()  { printf '[a2d-cloud] ERROR: %s\n' "$*" >&2; exit 1; }
+
+# Fetch a tarball from local or remote location.
+#   fetch_tarballed <source> <dest>
+#   source can be: local path, scp://user@host/path, ssh://user@host/path, user@host:/path
+fetch_tarballed() {
+    local src="$1"
+    local dest="$2"
+    case "$src" in
+        scp://*)
+            local rest="${src#scp://}"
+            local host="${rest%%:*}"
+            local remote="${rest#*:}"
+            scp "$host:$remote" "$dest"
+            ;;
+        ssh://*)
+            local rest="${src#ssh://}"
+            local host="${rest%%:*}"
+            local remote="${rest#*:}"
+            ssh -o BatchMode=yes "$host" "cat \"$remote\"" > "$dest"
+            ;;
+        user@*:/*)
+            local host="${src%%:*}"
+            local remote="${src#*:}"
+            scp "$host:$remote" "$dest"
+            ;;
+        *)
+            cp "$src" "$dest"
+            ;;
+    esac
+}
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
@@ -131,8 +161,11 @@ require_backend() {
 ensure_system_user() {
     if ! id "$A2D_RUN_USER" >/dev/null 2>&1; then
         log "creating system user $A2D_RUN_USER"
-        useradd --system --gid "$A2D_RUN_GROUP" \
-            --home "$A2D_APP_HOME" --shell /usr/sbin/nologin "$A2D_RUN_USER" 2>/dev/null || \
+        # Ensure the group exists; create it if missing.
+        if ! getent group "$A2D_RUN_GROUP" >/dev/null 2>&1; then
+            log "creating group $A2D_RUN_GROUP"
+            groupadd --system "$A2D_RUN_GROUP" || die "could not create group $A2D_RUN_GROUP"
+        fi
         useradd --system --gid "$A2D_RUN_GROUP" \
             --home "$A2D_APP_HOME" --shell /usr/sbin/nologin "$A2D_RUN_USER" || \
         die "could not create system user $A2D_RUN_USER"
@@ -153,6 +186,7 @@ install_python_deps() {
         python3 -m venv "$A2D_VENV_DIR"
     fi
     log "installing backend into venv"
+    "$A2D_VENV_DIR/bin/python" -m ensurepip --upgrade
     "$A2D_VENV_DIR/bin/python" -m pip install --quiet --upgrade pip
     "$A2D_VENV_DIR/bin/python" -m pip install --quiet -e "$A2D_APP_HOME"
     chown -R "$A2D_RUN_USER:$A2D_RUN_GROUP" "$A2D_VENV_DIR"
