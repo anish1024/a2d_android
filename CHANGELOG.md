@@ -142,3 +142,7 @@ hierarchical AND-gate progress system. Includes a logic-gate playground for test
 - Tests: `./gradlew test` → 11 tests (recorded baseline in README §6)
 - Build: `./gradlew assembleDebug` → `A2D/app/build/outputs/apk/debug/app-debug.apk`
 - Release status: Play Store submission pending
+- `MainActivity` 3-dot menu gained a **Sign In** item (person icon) that navigates to the `login`
+  route, so users can authenticate before tapping Sync. Previously the `login` route existed but was
+  unreachable from the task list, so `SyncEngine.sync()` always short-circuited with
+  "Not authenticated".
