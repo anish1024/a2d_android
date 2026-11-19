@@ -1,17 +1,25 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.a2d.app.ui.task
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -21,7 +29,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
@@ -40,12 +53,15 @@ fun TaskListScreen(
     onDeleteTask: (Long) -> Unit,
     onSaveEdit: (Long, String, String) -> Unit,
     onUpdateActivity: (Long, Long, String) -> Unit,
+    onMoveTask: (Long, Boolean) -> Unit,
+    onMoveTaskActivity: (Long, Long, Boolean) -> Unit,
     onCreateSample: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val expandedStates = remember { mutableStateMapOf<Long, Boolean>() }
     val editingStates = remember { mutableStateMapOf<Long, Boolean>() }
+    var draggingTaskId by remember { mutableStateOf<Long?>(null) }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Row(
@@ -96,9 +112,13 @@ fun TaskListScreen(
                     onDeleteTask = { onDeleteTask(task.id) },
                     onExportCsv = { exportTaskToCsv(context, task) },
                     onImportCsv = { showImportPlaceholder(context) },
-                    onMoveActivityUp = { moveActivity(task.id, true) },
-                    onMoveActivityDown = { moveActivity(task.id, false) },
-                    modifier = Modifier
+                    onMoveTask = { taskId, up -> onMoveTask(taskId, up) },
+                    onMoveTaskActivity = { taskId, activityId, up -> onMoveTaskActivity(taskId, activityId, up) },
+                    isDragging = draggingTaskId == task.id,
+                    onDragStateChange = { dragging ->
+                        draggingTaskId = if (dragging) task.id else null
+                    },
+                    modifier = Modifier.animateItem()
                 )
             }
         }
@@ -121,35 +141,54 @@ fun TaskCard(
     onDeleteTask: () -> Unit,
     onExportCsv: () -> Unit,
     onImportCsv: () -> Unit,
-    onMoveActivityUp: () -> Unit,
-    onMoveActivityDown: () -> Unit,
+    onMoveTask: (Long, Boolean) -> Unit,
+    onMoveTaskActivity: (Long, Long, Boolean) -> Unit,
+    isDragging: Boolean,
+    onDragStateChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showTaskDeleteDialog by remember { mutableStateOf(false) }
     var pendingActivityDeleteId by remember { mutableStateOf<Long?>(null) }
     var showMenu by remember { mutableStateOf(false) }
+    var draggingActivityId by remember { mutableStateOf<Long?>(null) }
 
     var draftName by remember(task.id) { mutableStateOf(task.taskName) }
     var draftDescription by remember(task.id) { mutableStateOf(task.description) }
 
-    fun exitEditMode() {
+    fun exitEditMode(saveChanges: Boolean = true) {
         if (isEditing) {
-            onSaveEdit(draftName, draftDescription)
+            if (saveChanges) {
+                onSaveEdit(draftName, draftDescription)
+            }
             onEditingChange(false)
         }
     }
 
-    ElevatedCard(modifier = modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = if (isDragging) 12.dp else 1.dp
+        )
+    ) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onHeaderClick() }
                     .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                // Drag handle for task reordering
+                DragHandle(
+                    onMoveUp = { onMoveTask(task.id, true) },
+                    onMoveDown = { onMoveTask(task.id, false) },
+                    onDragStateChange = onDragStateChange
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onHeaderClick() }
+                ) {
                     Text(
                         text = task.taskName,
                         style = MaterialTheme.typography.titleMedium,
@@ -164,69 +203,69 @@ fun TaskCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options"
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
                 ) {
-                    IconButton(onClick = {
-                        if (isEditing) exitEditMode() else onEditingChange(true)
-                    }) {
-                        Icon(
-                            imageVector = if (isEditing) Icons.Filled.Done else Icons.Filled.Edit,
-                            contentDescription = if (isEditing) "Done editing" else "Edit task"
-                        )
-                    }
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "More options"
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Export CSV") },
-                            onClick = {
-                                showMenu = false
-                                onExportCsv()
-                            },
-                            leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Import CSV") },
-                            onClick = {
-                                showMenu = false
-                                onImportCsv()
-                            },
-                            leadingIcon = { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Move Up") },
-                            onClick = {
-                                showMenu = false
-                                onMoveActivityUp()
-                            },
-                            leadingIcon = { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Move Down") },
-                            onClick = {
-                                showMenu = false
-                                onMoveActivityDown()
-                            },
-                            leadingIcon = { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete") },
-                            onClick = {
-                                showMenu = false
-                                showTaskDeleteDialog = true
-                            },
-                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) }
-                        )
-                    }
+                    DropdownMenuItem(
+                        text = { Text(if (isEditing) "Save" else "Edit Task") },
+                        onClick = {
+                            showMenu = false
+                            if (isEditing) exitEditMode() else onEditingChange(true)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (isEditing) Icons.Filled.Done else Icons.Filled.Edit,
+                                contentDescription = null
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Export CSV") },
+                        onClick = {
+                            showMenu = false
+                            onExportCsv()
+                        },
+                        leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Import CSV") },
+                        onClick = {
+                            showMenu = false
+                            onImportCsv()
+                        },
+                        leadingIcon = { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Move Up") },
+                        onClick = {
+                            showMenu = false
+                            onMoveTask(task.id, true)
+                        },
+                        leadingIcon = { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Move Down") },
+                        onClick = {
+                            showMenu = false
+                            onMoveTask(task.id, false)
+                        },
+                        leadingIcon = { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            showMenu = false
+                            showTaskDeleteDialog = true
+                        },
+                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) }
+                    )
                 }
             }
 
@@ -254,6 +293,24 @@ fun TaskCard(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { exitEditMode() }) {
+                            Icon(
+                                imageVector = Icons.Filled.Done,
+                                contentDescription = "Save",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Save")
+                        }
+                        Button(onClick = { exitEditMode(saveChanges = false) }) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Cancel",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Cancel")
+                        }
                     } else if (task.description.isNotBlank()) {
                         Text(
                             text = task.description,
@@ -272,8 +329,15 @@ fun TaskCard(
                         items(task.activities, key = { it.id }) { activity ->
                             ActivityRow(
                                 activity = activity,
-                                onCheckedChange = { onToggleActivity(activity.id, it) },
-                                onDelete = { pendingActivityDeleteId = activity.id }
+                                onMoveUp = { onMoveTaskActivity(task.id, activity.id, true) },
+                                onMoveDown = { onMoveTaskActivity(task.id, activity.id, false) },
+                                onToggleActivity = { onToggleActivity(activity.id, it) },
+                                onDelete = { onDeleteActivity(activity.id) },
+                                isDragging = draggingActivityId == activity.id,
+                                onDragStateChange = { dragging ->
+                                    draggingActivityId = if (dragging) activity.id else null
+                                },
+                                modifier = Modifier.animateItem()
                             )
                         }
                     }
@@ -314,16 +378,36 @@ fun TaskCard(
 @Composable
 fun ActivityRow(
     activity: ActionItem,
-    onCheckedChange: (Boolean) -> Unit,
-    onDelete: () -> Unit
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onToggleActivity: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+    isDragging: Boolean = false,
+    onDragStateChange: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = if (isDragging) 0.9f else 1f
+                scaleX = if (isDragging) 1.02f else 1f
+                scaleY = if (isDragging) 1.02f else 1f
+            }
+            .background(
+                if (isDragging) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                } else {
+                    Color.Transparent
+                }
+            )
     ) {
-        Checkbox(
-            checked = activity.achieved,
-            onCheckedChange = onCheckedChange
+        // Drag handle for activity reordering
+        DragHandle(
+            onMoveUp = onMoveUp,
+            onMoveDown = onMoveDown,
+            onDragStateChange = onDragStateChange
         )
         Text(
             text = activity.description,
@@ -338,7 +422,9 @@ fun ActivityRow(
             } else {
                 null
             },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onToggleActivity(!activity.achieved) }
         )
         IconButton(onClick = onDelete) {
             Icon(
@@ -347,6 +433,88 @@ fun ActivityRow(
                 tint = MaterialTheme.colorScheme.error
             )
         }
+    }
+}
+
+/**
+ * Drag handle that allows reordering items by dragging up/down.
+ * Uses vertical drag gesture detection: each time the user drags by one item height,
+ * the corresponding move callback is invoked once. The icon highlights and lifts while
+ * dragging so the interaction feels responsive.
+ */
+@Composable
+private fun DragHandle(
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onDragStateChange: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    var isDragging by remember { mutableStateOf(false) }
+    val accumulatedOffset = remember { floatArrayOf(0f) }
+    val density = LocalDensity.current
+    val itemHeight = with(density) { 48.dp.toPx() }
+
+    Box(
+        modifier = modifier
+            .size(44.dp)
+            .graphicsLayer {
+                scaleX = if (isDragging) 1.15f else 1f
+                scaleY = if (isDragging) 1.15f else 1f
+                alpha = if (isDragging) 0.85f else 1f
+            }
+            .clip(CircleShape)
+            .background(
+                if (isDragging) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    Color.Transparent
+                }
+            )
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = {
+                        isDragging = true
+                        onDragStateChange(true)
+                        accumulatedOffset[0] = 0f
+                    },
+                    onDragEnd = {
+                        isDragging = false
+                        onDragStateChange(false)
+                        accumulatedOffset[0] = 0f
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                        onDragStateChange(false)
+                        accumulatedOffset[0] = 0f
+                    },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        accumulatedOffset[0] += dragAmount
+                        while (accumulatedOffset[0] >= itemHeight) {
+                            accumulatedOffset[0] -= itemHeight
+                            onMoveDown()
+                        }
+                        while (accumulatedOffset[0] <= -itemHeight) {
+                            accumulatedOffset[0] += itemHeight
+                            onMoveUp()
+                        }
+                    }
+                )
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { /* consume tap on drag handle */ })
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.DragHandle,
+            contentDescription = "Drag to reorder",
+            tint = if (isDragging) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
     }
 }
 
@@ -406,9 +574,4 @@ private fun exportTaskToCsv(context: android.content.Context, task: Task) {
 /** Import activities from CSV (placeholder until SAF file pick is wired). */
 private fun showImportPlaceholder(context: android.content.Context) {
     Toast.makeText(context, "CSV import pending backend integration", Toast.LENGTH_SHORT).show()
-}
-
-/** Move an activity within its task's activity list (placeholder). */
-private fun moveActivity(taskId: Long, up: Boolean) {
-    // TODO: swap priority/order in Room once ordering is spec'd.
 }

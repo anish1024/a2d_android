@@ -7,7 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 - Status: Current
 - Owner: project maintainer
 - Last updated: 2026-11-18
-- Last verified against: code baseline `8d9563d`
+- Last verified against: code baseline after REDESIGN-02 round 4 (drag-n-drop reorder + Edit Task in 3-dot menu)
 
 ## [Unreleased]
 
@@ -41,8 +41,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   - `TaskViewModel` gained `updateTask(taskId, newName, newDescription)` and
     `updateActivity(taskId, activityId, newDescription)`; `MainActivity` wires them to the list screen.
   - `TaskListScreen.TaskCard` gained inline edit mode (Edit/Done icon + name/description fields) and a
-    per-card 3-dot overflow menu (**Export CSV**, **Import CSV**, **Move Up**, **Move Down**, **Delete**);
+    per-card 3-dot overflow menu (**Edit Task**, **Export CSV**, **Import CSV**, **Move Up**, **Move Down**, **Delete**);
     header tap toggles the activity body with internal scrolling.
+  - **Drag-and-drop reordering.** A `DragHandle` composable (using `detectVerticalDragGestures`) lets
+    users reorder items by dragging up/down:
+    - A drag handle icon appears **before the task name** in each task card header; drag gestures
+      trigger `TaskViewModel.moveTask(taskId, up/down)`.
+    - A drag handle icon appears **before each activity** in the activity list; drag gestures trigger
+      `TaskViewModel.moveActivity(taskId, activityId, up/down)`.
+    - Tasks are reordered by swapping their `priority` values in Room; activities are reordered by
+      swapping `description`/`achieved` while preserving stable IDs.
+    - The task-level **Edit** button was removed from the header and moved into the 3-dot menu as
+      **Edit Task**, so the header row now shows drag handle + title + overflow menu only.
   - CSV export/import and move up/down are placeholders (visible Toast feedback) until backend/SAF wiring.
 - `A2DDatabase` bumped from version 1 → 2 and now exposes a singleton `getDatabase(context)` that
   installs `MIGRATION_1_2`; `AppModule` delegates to it.

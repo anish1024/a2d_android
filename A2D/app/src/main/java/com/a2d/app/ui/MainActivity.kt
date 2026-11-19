@@ -140,6 +140,10 @@ class MainActivity : ComponentActivity() {
                                     onUpdateActivity = { taskId, activityId, description ->
                                         taskVm.updateActivity(taskId, activityId, description)
                                     },
+                                    onMoveTask = { taskId, up -> taskVm.moveTask(taskId, up) },
+                                    onMoveTaskActivity = { taskId, activityId, up ->
+                                        taskVm.moveActivity(taskId, activityId, up)
+                                    },
                                     onCreateSample = {
                                         val newId = System.currentTimeMillis()
                                         taskVm.createSampleTask(newId, "Task #$newId", 1)
@@ -172,6 +176,9 @@ class MainActivity : ComponentActivity() {
                                 onDeleteTask = { id ->
                                     taskVm.deleteTask(id)
                                     navController.navigateUp()
+                                },
+                                onMoveTaskActivity = { taskId, activityId, up ->
+                                    taskVm.moveActivity(taskId, activityId, up)
                                 }
                             )
                         }
