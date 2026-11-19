@@ -10,8 +10,11 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -151,6 +154,7 @@ fun TaskCard(
     var pendingActivityDeleteId by remember { mutableStateOf<Long?>(null) }
     var showMenu by remember { mutableStateOf(false) }
     var draggingActivityId by remember { mutableStateOf<Long?>(null) }
+    val activityListState = rememberLazyListState()
 
     var draftName by remember(task.id) { mutableStateOf(task.taskName) }
     var draftDescription by remember(task.id) { mutableStateOf(task.description) }
@@ -311,35 +315,38 @@ fun TaskCard(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Cancel")
                         }
-                    } else if (task.description.isNotBlank()) {
-                        Text(
-                            text = task.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    LazyColumn(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 200.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .heightIn(max = 200.dp)
                     ) {
-                        items(task.activities, key = { it.id }) { activity ->
-                            ActivityRow(
-                                activity = activity,
-                                onMoveUp = { onMoveTaskActivity(task.id, activity.id, true) },
-                                onMoveDown = { onMoveTaskActivity(task.id, activity.id, false) },
-                                onToggleActivity = { onToggleActivity(activity.id, it) },
-                                onDelete = { onDeleteActivity(activity.id) },
-                                isDragging = draggingActivityId == activity.id,
-                                onDragStateChange = { dragging ->
-                                    draggingActivityId = if (dragging) activity.id else null
-                                },
-                                modifier = Modifier.animateItem()
-                            )
+                        LazyColumn(
+                            state = activityListState,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(task.activities, key = { it.id }) { activity ->
+                                ActivityRow(
+                                    activity = activity,
+                                    onMoveUp = { onMoveTaskActivity(task.id, activity.id, true) },
+                                    onMoveDown = { onMoveTaskActivity(task.id, activity.id, false) },
+                                    onToggleActivity = { onToggleActivity(activity.id, it) },
+                                    onDelete = { onDeleteActivity(activity.id) },
+                                    isDragging = draggingActivityId == activity.id,
+                                    onDragStateChange = { dragging ->
+                                        draggingActivityId = if (dragging) activity.id else null
+                                    },
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
                         }
+                        TaskActivityScrollbar(
+                            listState = activityListState,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -371,6 +378,57 @@ fun TaskCard(
                 onDeleteActivity(activityId)
             },
             onDismiss = { pendingActivityDeleteId = null }
+        )
+    }
+}
+
+/**
+ * A compact, Android-compatible vertical scrollbar that works with [LazyListState].
+ * Draws a thin track plus a proportional thumb that tracks the scroll position, and only
+ * renders when the list is actually scrollable. (Compose Desktop's `VerticalScrollbar` /
+ * `rememberScrollbarAdapter` are not available on Android.)
+ */
+@Composable
+fun TaskActivityScrollbar(
+    listState: LazyListState,
+    modifier: Modifier = Modifier
+) {
+    val scrollable by remember {
+        derivedStateOf { listState.canScrollBackward || listState.canScrollForward }
+    }
+    if (!scrollable) return
+
+    val layoutInfo = listState.layoutInfo
+    val totalItems = layoutInfo.totalItemsCount
+    val visibleItems = layoutInfo.visibleItemsInfo
+    if (totalItems == 0 || visibleItems.isEmpty()) return
+
+    val visibleCount = visibleItems.size
+    val thumbFraction = (visibleCount.toFloat() / totalItems).coerceIn(0.08f, 1f)
+    val firstIndex = visibleItems.first().index
+    val maxFirstIndex = (totalItems - visibleCount).coerceAtLeast(1)
+    val scrollFraction = (firstIndex.toFloat() / maxFirstIndex).coerceIn(0f, 1f)
+
+    BoxWithConstraints(modifier = modifier.width(6.dp)) {
+        val trackHeight = maxHeight
+        val thumbHeight = trackHeight * thumbFraction
+        val thumbTop = (trackHeight - thumbHeight) * scrollFraction
+
+        // Track (subtle background)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f))
+        )
+        // Thumb (scroll position indicator)
+        Box(
+            Modifier
+                .offset(y = thumbTop)
+                .fillMaxWidth()
+                .height(thumbHeight)
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
         )
     }
 }

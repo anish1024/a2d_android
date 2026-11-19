@@ -7,7 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 - Status: Current
 - Owner: project maintainer
 - Last updated: 2026-11-18
-- Last verified against: code baseline after REDESIGN-02 round 4 (drag-n-drop reorder + Edit Task in 3-dot menu)
+- Last verified against: code baseline after REDESIGN-02 round 6 (task description dedupe + Android scrollbar fix)
 
 ## [Unreleased]
 
@@ -60,6 +60,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   added so existing call sites compile unchanged).
 
 ### Fixed
+
+- Task card duplicate description: the task description is now rendered exactly once per task card
+  (in the card header, directly below the task name); the redundant copy previously shown in the
+  expanded activity body was removed.
+- Activity list scrollbar: the `VerticalScrollbar` / `rememberScrollbarAdapter` APIs turned out to be
+  Compose Desktop-only and are not part of the Compose-for-Android artifact, so the build failed with
+  `Unresolved reference`. Replaced with a custom `TaskActivityScrollbar` composable driven off
+  `LazyListState` (proportional thumb) that renders only when the list is scrollable — visible scrollbars
+  now work on Android devices.
+- Task drag-and-drop reorder (REDESIGN-02 round 5) and Edit Task/Save task flow (round 5) remain
+  fixed on top of the task card redesign.
 
 - Cloud deployment: `deploy.sh` now flattens the `a2d-cloud/` tarball wrapper and chowns the target;
   `lib.sh` creates the service group before the user and uses `ensurepip` for a working pip on
