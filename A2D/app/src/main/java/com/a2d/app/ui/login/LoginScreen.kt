@@ -39,7 +39,7 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Enter your email to continue",
+            text = "Enter your credentials to continue",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -57,6 +57,26 @@ fun LoginScreen(
         if (uiState.emailError != null) {
             Text(
                 text = uiState.emailError ?: "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.Start)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = uiState.password,
+            onValueChange = viewModel::onPasswordChanged,
+            label = { Text("Password") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            isError = uiState.passwordError != null,
+            modifier = Modifier.fillMaxWidth()
+        )
+        if (uiState.passwordError != null) {
+            Text(
+                text = uiState.passwordError ?: "",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.Start)

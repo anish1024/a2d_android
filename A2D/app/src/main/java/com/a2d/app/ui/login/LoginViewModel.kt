@@ -2,24 +2,33 @@ package com.a2d.app.ui.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a2d.app.data.network.ApiClient
+import com.a2d.app.data.network.TokenStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.Response
 import javax.inject.Inject
 
 data class LoginUiState(
     val email: String = "",
+    val password: String = "",
     val isContinueEnabled: Boolean = false,
     val emailError: String? = null,
+    val passwordError: String? = null,
     val isLoading: Boolean = false,
     val loginError: String? = null,
     val loginSucceeded: Boolean = false
 )
 
 @HiltViewModel
-class LoginViewModel @Inject constructor() : ViewModel() {
+class LoginViewModel @Inject constructor(
+    private val apiClient: ApiClient,
+    private val tokenStore: TokenStore
+) : ViewModel() {
+
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -29,8 +38,16 @@ class LoginViewModel @Inject constructor() : ViewModel() {
         val valid = email.isNotEmpty() && email.matches(emailRegex)
         _uiState.value = _uiState.value.copy(
             email = email,
-            isContinueEnabled = valid,
-            emailError = if (email.isNotEmpty() && !valid) "Invalid email address" else null
+            emailError = if (email.isNotEmpty() && !valid) "Invalid email address" else null,
+            isContinueEnabled = valid && _uiState.value.password.isNotBlank()
+        )
+    }
+
+    fun onPasswordChanged(password: String) {
+        _uiState.value = _uiState.value.copy(
+            password = password,
+            passwordError = null,
+            isContinueEnabled = password.isNotBlank() && _uiState.value.email.matches(emailRegex)
         )
     }
 
@@ -42,19 +59,44 @@ class LoginViewModel @Inject constructor() : ViewModel() {
             loginError = null
         )
 
-        viewModelScope.launch(Dispatchers.Default) {
-            // TODO: replace with real backend auth call (invite-only create/login) when SSO /
-            // email+password verification is implemented.
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                kotlinx.coroutines.delay(800)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    loginSucceeded = true
-                )
+                val response: Response<com.a2d.app.data.network.AuthResponse> =
+                    apiClient.api.login(
+                        email = _uiState.value.email,
+                        password = _uiState.value.password
+                    ).execute()
+
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        tokenStore.saveTokens(
+                            accessToken = body.accessToken,
+                            refreshToken = body.refreshToken,
+                            expiresIn = body.expiresIn,
+                            userId = body.userId,
+                            email = _uiState.value.email
+                        )
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            loginSucceeded = true
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            loginError = "Empty response from server."
+                        )
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        loginError = "Login failed: ${response.code()} ${response.message()}"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    loginError = "Unable to continue. Try again."
+                    loginError = "Unable to connect. Check your internet and try again."
                 )
             }
         }
