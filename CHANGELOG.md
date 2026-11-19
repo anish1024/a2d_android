@@ -39,6 +39,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   - Dependencies added in `libs.versions.toml` + `app/build.gradle.kts`: retrofit 2.11.0,
     converter-gson 2.11.0, okhttp 4.12.0, logging-interceptor 4.12.0, security-crypto 1.1.0-alpha06,
     work-runtime-ktx 2.9.0.
+  - **Login → backend auth wired.** `LoginViewModel` is now `@HiltViewModel` with injected `ApiClient`
+    and `TokenStore`; `onContinueClicked()` calls `POST /v1/auth/login` (email + password form fields)
+    on `Dispatchers.IO` and, on success, populates `TokenStore` with the access/refresh tokens, expiry,
+    user id, and email. `LoginScreen` gained a password `OutlinedTextField` (keyboard type `Password`,
+    inline error state). On failure the user sees "Unable to connect. Check your internet and try again."
+    (network/parse error) or the HTTP status code/message. The 800ms simulated delay is removed.
 - `RoomMigration.MIGRATION_1_2` with `ALTER TABLE` column adds + UUID/`updated_at` backfill and
   `dirty = 1` for every existing row, so the first backup uploads the full dataset.
 - Room schema export enabled (`exportSchema = true`, Room Gradle plugin); committed
