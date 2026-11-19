@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
+import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -93,6 +94,7 @@ class MainActivity : ComponentActivity() {
                             val tasks by taskVm.tasks.collectAsState()
                             val milestone by taskVm.milestoneOutput.collectAsState()
                             var showMenu by remember { mutableStateOf(false) }
+                            val coroutineScope = rememberCoroutineScope()
 
                             Scaffold(
                                 topBar = {
@@ -110,8 +112,10 @@ class MainActivity : ComponentActivity() {
                                                     text = { Text("Sync") },
                                                     onClick = {
                                                         showMenu = false
-                                                        val message = taskVm.syncNow()
-                                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                                        coroutineScope.launch {
+                                                            val message = taskVm.syncNow()
+                                                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                                        }
                                                     },
                                                     leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) }
                                                 )

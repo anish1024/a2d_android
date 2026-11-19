@@ -11,7 +11,10 @@ data class Task(
     override var achieved: Boolean = false,
     val context: String = "No Context",
     val creationTime: String? = null,
-    override var activities: List<ActionItem> = emptyList()
+    override var activities: List<ActionItem> = emptyList(),
+    val syncId: String = "",
+    val updatedAt: Long = 0L,
+    val dirty: Boolean = false
 ) : ActivityAchieved, ActivityProcessor {
 
     /**

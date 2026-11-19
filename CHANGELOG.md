@@ -6,16 +6,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 - Status: Current
 - Owner: project maintainer
-- Last updated: 2026-11-18
-- Last verified against: code baseline after REDESIGN-02 round 6 (task description dedupe + Android scrollbar fix)
+- Last updated: 2026-11-19
+- Last verified against: code baseline after FEAT-0002 cloud-sync implementation (SyncEngine + network stack)
 
 ## [Unreleased]
 
 ### Added
 
-- **Cloud sync (FEAT-0002) — Room v2 migration (Android P2, step 2).** Added sync metadata columns
-  to `tasks` and `action_items`: `sync_id` (UUID), `updated_at` (LWW stamp), `deleted` (tombstone
-  flag), and `dirty` (unsynced flag).
+- **Cloud sync (FEAT-0002) — full implementation.** Offline-first sync between the Room database and the
+  `a2d-cloud` backend (JWT auth, LWW merge, tombstones, keyset pagination):
+  - Network stack: Retrofit 2.11 + OkHttp 4.12 + Gson (`A2DSyncApi`, `ApiClient`, `ApiModels`);
+    `INTERNET` permission; base URL from `BuildConfig.A2D_CLOUD_BASE_URL`.
+  - `TokenStore` (EncryptedSharedPreferences via `MasterKey` AES256_GCM) stores access/refresh tokens,
+    expiry, user id, and a per-install device id.
+  - `SyncEngine` (Hilt singleton) orchestrates backup-then-download: uploads dirty rows
+    (`POST /v1/sync/backup` with `Idempotency-Key`), then downloads server changes
+    (`GET /v1/sync/updates` keyset pagination, up to `MAX_BATCH_ROWS = 500`), marking uploaded rows
+    clean and advancing the `sync_state` watermarks only on success.
+  - `SyncDao` (Room) with dirty-row reads, watermark persistence, per-row dirty/sync-meta bookkeeping,
+    syncId lookups, and download upserts; `SyncStateEntity` (`sync_state` table) tracks
+    `last_backup_at` / `last_download_at` (opaque server cursor) / `last_sync_at` / `last_sync_status`.
+  - Room v3: `A2DDatabase` version 2 → 3 with `MIGRATION_2_3` creating + seeding `sync_state`.
+  - Domain models `Task` / `ActionItem` carry `syncId` / `updatedAt` / `dirty` (and `taskSyncId` on
+    action items); `TaskRepositoryImpl` writes UUID `syncId` + `updatedAt` + `dirty = 1` on every save.
+  - Deletions are tombstones: `TaskDao.tombstoneTask`/`tombstoneActionItemsForTask` set `deleted = 1,
+    dirty = 1` instead of hard DELETE; display queries filter `deleted = 0`; tombstones propagate to the
+    server on the next backup.
+  - `TaskViewModel.syncNow()` is a suspend function wired to the injected `SyncEngine`; `MainActivity`
+    runs it in a coroutine scope and surfaces the result via Toast ("Cloud sync OK: uploaded N,
+    downloaded M" / "Cloud sync failed: ...").
+  - DI: `AppModule` provides `A2DDatabase`, `TaskDao`, `SyncDao`, `ApiClient`, `TokenStore`, `SyncEngine`.
+  - Dependencies added in `libs.versions.toml` + `app/build.gradle.kts`: retrofit 2.11.0,
+    converter-gson 2.11.0, okhttp 4.12.0, logging-interceptor 4.12.0, security-crypto 1.1.0-alpha06,
+    work-runtime-ktx 2.9.0.
 - `RoomMigration.MIGRATION_1_2` with `ALTER TABLE` column adds + UUID/`updated_at` backfill and
   `dirty = 1` for every existing row, so the first backup uploads the full dataset.
 - Room schema export enabled (`exportSchema = true`, Room Gradle plugin); committed

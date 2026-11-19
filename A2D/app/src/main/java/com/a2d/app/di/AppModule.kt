@@ -3,6 +3,10 @@ package com.a2d.app.di
 import android.content.Context
 import com.a2d.app.data.local.A2DDatabase
 import com.a2d.app.data.local.dao.TaskDao
+import com.a2d.app.data.local.dao.SyncDao
+import com.a2d.app.data.network.ApiClient
+import com.a2d.app.data.network.TokenStore
+import com.a2d.app.data.sync.SyncEngine
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,5 +27,40 @@ object AppModule {
     @Provides
     fun provideTaskDao(database: A2DDatabase): TaskDao {
         return database.taskDao()
+    }
+
+    @Provides
+    fun provideSyncDao(database: A2DDatabase): SyncDao {
+        return database.syncDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideApiClient(@ApplicationContext context: Context): ApiClient {
+        return ApiClient(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTokenStore(@ApplicationContext context: Context): TokenStore {
+        return TokenStore(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSyncEngine(
+        @ApplicationContext context: Context,
+        taskDao: TaskDao,
+        syncDao: SyncDao,
+        apiClient: ApiClient,
+        tokenStore: TokenStore
+    ): SyncEngine {
+        return SyncEngine(
+            context = context,
+            taskDao = taskDao,
+            syncDao = syncDao,
+            apiClient = apiClient,
+            tokenStore = tokenStore
+        )
     }
 }

@@ -4,13 +4,20 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.a2d.app.data.local.dao.SyncDao
 import com.a2d.app.data.local.dao.TaskDao
 import com.a2d.app.data.local.entity.ActionItemEntity
+import com.a2d.app.data.local.entity.SyncStateEntity
 import com.a2d.app.data.local.entity.TaskEntity
 
-@Database(entities = [TaskEntity::class, ActionItemEntity::class], version = 2, exportSchema = true)
+@Database(
+    entities = [TaskEntity::class, ActionItemEntity::class, SyncStateEntity::class],
+    version = 3,
+    exportSchema = true
+)
 abstract class A2DDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
+    abstract fun syncDao(): SyncDao
 
     companion object {
         @Volatile private var INSTANCE: A2DDatabase? = null
@@ -22,6 +29,7 @@ abstract class A2DDatabase : RoomDatabase() {
                 "a2d_database.db"
             )
                 .addMigrations(RoomMigration.MIGRATION_1_2)
+                .addMigrations(RoomMigration.MIGRATION_2_3)
                 .build()
             INSTANCE = instance
             instance

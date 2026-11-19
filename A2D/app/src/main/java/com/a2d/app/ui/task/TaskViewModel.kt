@@ -3,6 +3,8 @@ package com.a2d.app.ui.task
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a2d.app.data.repository.TaskRepositoryImpl
+import com.a2d.app.data.network.SyncResult
+import com.a2d.app.data.sync.SyncEngine
 import com.a2d.app.domain.engine.SerialAndGateProcessor
 import com.a2d.app.domain.engine.TaskListPipelineProcessor
 import com.a2d.app.domain.model.ActionItem
@@ -21,7 +23,8 @@ import javax.inject.Inject
 class TaskViewModel @Inject constructor(
     private val repository: TaskRepositoryImpl,
     private val gateProcessor: SerialAndGateProcessor,
-    private val pipelineProcessor: TaskListPipelineProcessor
+    private val pipelineProcessor: TaskListPipelineProcessor,
+    private val syncEngine: SyncEngine
 ) : ViewModel() {
 
     val tasks: StateFlow<List<Task>> = repository.getAllTasks()
@@ -220,18 +223,21 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Triggers a cloud sync attempt.
+        /**
+     * Triggers a cloud sync attempt via the real SyncEngine.
      *
-     * Returns a user-facing status string. The real `SyncEngine` is not yet wired (P1), so this
-     * currently returns a placeholder message explaining that cloud sync is pending backend
-     * integration. Once the engine is available, this method will perform the actual backup
-     * (`POST /v1/sync/backup`) and updates (`GET /v1/sync/updates`) round-trip and return a
-     * success/failure summary.
+     * Returns a user-facing status string describing the sync outcome.
      */
-    fun syncNow(): String {
-        // TODO: wire to real SyncEngine once P1 backend is available.
-        return "Cloud sync is pending backend integration"
+    suspend fun syncNow(): String {
+        val result = syncEngine.sync()
+        return when (result) {
+            is SyncResult.Success ->
+                "Cloud sync OK: uploaded ${result.uploaded}, downloaded ${result.downloaded}"
+            is SyncResult.Failure ->
+                "Cloud sync failed: ${result.message}"
+            SyncResult.Offline ->
+                "Cloud sync offline"
+        }
     }
 
     private suspend fun recalculatePipeline() {

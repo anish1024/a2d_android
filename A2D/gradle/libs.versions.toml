@@ -14,6 +14,11 @@ coroutines = "1.8.1"
 junit = "4.13.2"
 junitExt = "1.2.1"
 robolectric = "4.12"
+retrofit = "2.11.0"
+okhttp = "4.12.0"
+gson = "2.11.0"
+securityCrypto = "1.1.0-alpha06"
+work = "2.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
