@@ -53,6 +53,11 @@ done
 # Defaults
 SOURCE="${SOURCE:-$(realpath -m "$SCRIPT_DIR/../../")}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+
+# If OUTPUT is a directory path (ends with /), auto-append a tarball name.
+if [ -n "$OUTPUT" ] && [ "${OUTPUT: -1}" = "/" ]; then
+    OUTPUT="${OUTPUT}a2d-cloud-$TIMESTAMP.tar.gz"
+fi
 OUTPUT="${OUTPUT:-$SCRIPT_DIR/a2d-cloud-$TIMESTAMP.tar.gz}"
 
 SRC_DIR="$SOURCE/a2d-cloud"
