@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -118,6 +119,17 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     },
                                                     leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("Sign In") },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        navController.navigate("login") {
+                                                            popUpTo("taskList") { inclusive = true }
+                                                            launchSingleTop = true
+                                                        }
+                                                    },
+                                                    leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) }
                                                 )
                                             }
                                         }
