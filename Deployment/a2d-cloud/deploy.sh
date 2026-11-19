@@ -22,6 +22,10 @@
 #                              Default: /opt/a2d-cloud
 #   --from-source              Install from the source tree at ../../a2d-cloud
 #                              (relative to deploy.sh location). Implies no --tarball.
+#   --uninstall                Stop the service, remove the supervisord drop-in,
+#                              and delete the installation directory.
+#                              Use --force to skip the confirmation prompt.
+#   --force                    Skip confirmation prompts (for --uninstall).
 # =============================================================================
 
 set -Eeuo pipefail
@@ -32,7 +36,7 @@ source "$SCRIPT_DIR/lib.sh"
 
 usage() {
     cat <<'EOF'
-Usage: sudo ./deploy.sh [--tarball <path>] [--from-source] [--target <path>]
+Usage: sudo ./deploy.sh [--tarball <path>] [--from-source] [--target <path>] [--uninstall] [--force]
 
   --tarball <path>           Path to backend source tarball.
                             Local path, or scp://user@host/path,
@@ -44,12 +48,20 @@ Usage: sudo ./deploy.sh [--tarball <path>] [--from-source] [--target <path>]
 
   --target <path>            Installation root for the extracted source.
                              Default: /opt/a2d-cloud
+
+  --uninstall                Stop the service, remove the supervisord drop-in,
+                             and delete the installation directory.
+                             Use --force to skip the confirmation prompt.
+
+  --force                    Skip confirmation prompts (for --uninstall).
 EOF
 }
 
 TARBALL=""
 FROM_SOURCE=""
 TARGET=""
+UNINSTALL=""
+FORCE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -69,6 +81,14 @@ while [ $# -gt 0 ]; do
             TARGET="${2:-}"
             shift 2
             ;;
+        --uninstall)
+            UNINSTALL=1
+            shift
+            ;;
+        --force)
+            FORCE=1
+            shift
+            ;;
         --)
             shift
             break
@@ -81,6 +101,58 @@ while [ $# -gt 0 ]; do
 done
 
 require_root
+
+# --- Uninstall path (skip all deploy steps) ---
+if [ "${UNINSTALL:-0}" = "1" ]; then
+    need_cmd supervisorctl
+    A2D_APP_HOME="${TARGET:-$(realpath -m "$SCRIPT_DIR/../../a2d-cloud")}"
+    A2D_VENV_DIR="$A2D_APP_HOME/.venv"
+    A2D_DATA_DIR="$A2D_APP_HOME/data"
+
+    if [ "${FORCE:-0}" != "1" ]; then
+        if [ -t 0 ]; then
+            confirm "Uninstall A2D cloud ($A2D_APP_HOME, user $A2D_RUN_USER, data $A2D_DATA_DIR)?" \
+                || die "aborted"
+        else
+            die "refusing to uninstall without a terminal; pass --force to proceed non-interactively"
+        fi
+    fi
+
+    log "stopping service"
+    supervisorctl stop a2d-app a2d-cloudflared 2>/dev/null || warn "service was not running"
+
+    if [ -f "$A2D_SUPERVISOR_CONF" ]; then
+        log "removing supervisord drop-in: $A2D_SUPERVISOR_CONF"
+        rm -f "$A2D_SUPERVISOR_CONF"
+    else
+        log "no supervisord drop-in found"
+    fi
+
+    log "reloading supervisord"
+    supervisorctl reread 2>/dev/null || true
+    supervisorctl update 2>/dev/null || true
+
+    if id "$A2D_RUN_USER" >/dev/null 2>&1; then
+        log "removing system user $A2D_RUN_USER"
+        userdel -r "$A2D_RUN_USER" 2>/dev/null || warn "could not remove system user $A2D_RUN_USER"
+        if getent group "$A2D_RUN_GROUP" >/dev/null 2>&1; then
+            groupdel "$A2D_RUN_GROUP" 2>/dev/null || warn "could not remove group $A2D_RUN_GROUP"
+        fi
+    else
+        log "system user $A2D_RUN_USER not present, skipping"
+    fi
+
+    for d in "$A2D_APP_HOME" "$A2D_DATA_DIR" "$A2D_LOG_DIR"; do
+        if [ -d "$d" ]; then
+            log "removing $d"
+            rm -rf "$d"
+        fi
+    done
+
+    log "backend service uninstalled"
+    exit 0
+fi
+
 need_cmd curl
 need_cmd supervisorctl
 require_env_file
