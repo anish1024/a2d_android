@@ -85,3 +85,27 @@ def test_refresh_token(client: TestClient):
 def test_refresh_unauthorized(client: TestClient):
     r = client.get("/v1/auth/refresh")
     assert r.status_code == 401
+
+
+def test_logout_success(client: TestClient):
+    """Logout with a valid bearer token should succeed."""
+    # Login first
+    r = client.post(
+        "/v1/auth/login",
+        data={"email": "test@example.com", "password": "test123"},
+    )
+    assert r.status_code == 200
+    access_token = r.json()["access_token"]
+
+    # Logout
+    r2 = client.post(
+        "/v1/auth/logout",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert r2.status_code == 200
+    assert "Successfully logged out" in r2.json()["detail"]
+
+
+def test_logout_unauthorized(client: TestClient):
+    r = client.post("/v1/auth/logout")
+    assert r.status_code == 401

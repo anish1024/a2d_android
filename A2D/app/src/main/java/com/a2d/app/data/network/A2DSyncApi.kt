@@ -41,6 +41,11 @@ interface A2DSyncApi {
         @Query("lastDownloadAt") lastDownloadAt: String,
         @Query("limit") limit: Int = 500
     ): Call<SyncUpdatesResponse>
+
+    @POST("/v1/auth/logout")
+    fun logout(
+        @Header("Authorization") token: String
+    ): Call<Unit>
 }
 
 /**

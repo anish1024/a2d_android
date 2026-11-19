@@ -64,6 +64,23 @@ async def login(email: str = Form(...), password: str = Form(...)):
     }
 
 
+@router.post("/logout")
+async def logout(current_user: dict = Depends(get_current_user)):
+    """Logout the current user by revoking all their refresh tokens."""
+    user_id = current_user.get("sub")
+    now = int(time.time())
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User id missing")
+
+    with get_control_session() as session:
+        session.execute(
+            text("UPDATE refresh_tokens SET revoked_at = :now "
+                 "WHERE user_id = :user_id AND revoked_at IS NULL"),
+            {"now": now, "user_id": user_id},
+        )
+    return {"detail": "Successfully logged out"}
+
+
 @router.get("/refresh")
 async def refresh_token(user: dict = Depends(get_current_user)):
     """Issue a fresh access + refresh token for an authenticated user.

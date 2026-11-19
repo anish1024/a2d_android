@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -22,6 +23,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.a2d.app.ui.auth.AuthViewModel
+import com.a2d.app.ui.auth.LogoutState
 import androidx.navigation.navArgument
 import com.a2d.app.ui.logicgate.LogicGateScreen
 import com.a2d.app.ui.logicgate.LogicGateViewModel
@@ -44,6 +47,17 @@ class MainActivity : ComponentActivity() {
                 val onTaskList = currentRoute == "taskList" || currentRoute?.startsWith("taskDetail/") == true
                 // onLogin removed; login is no longer the start destination
                 val context = LocalContext.current
+                val authVm: AuthViewModel = hiltViewModel()
+                val logoutState by authVm.logoutState.collectAsState()
+                LaunchedEffect(logoutState) {
+                    if (logoutState is LogoutState.Success) {
+                        authVm.resetLogoutState()
+                        navController.navigate("login") {
+                            popUpTo("taskList") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
 
                 Scaffold(
                     bottomBar = {
@@ -130,6 +144,14 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     },
                                                     leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("Sign Out") },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        authVm.logout()
+                                                    },
+                                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) }
                                                 )
                                             }
                                         }
