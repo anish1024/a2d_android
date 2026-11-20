@@ -43,7 +43,7 @@ android {
         buildConfigField(
             "String",
             "A2D_CLOUD_BASE_URL",
-            "\"https://devapp8000.anisandbox.org\""
+            "\"https://devapp8000.anisandbox.org/\""
         )
     }
 

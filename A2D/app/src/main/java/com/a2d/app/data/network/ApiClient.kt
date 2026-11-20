@@ -1,6 +1,7 @@
 package com.a2d.app.data.network
 
 import android.content.Context
+import com.a2d.app.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -10,7 +11,7 @@ class ApiClient(private val context: Context) {
 
     private val client = buildOkHttpClient()
     private val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl("https://devapp8000.anisandbox.org")
+        .baseUrl(BuildConfig.A2D_CLOUD_BASE_URL)
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()

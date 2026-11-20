@@ -58,6 +58,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                
+                // Auth gate - prevent access to taskList and logicGate without authentication
+                LaunchedEffect(authVm.isAuthenticated.value) {
+                    val isAuth = authVm.isAuthenticated.value
+                    val currentRoute = navController.currentBackStackEntry?.destination?.route
+                    
+                    if (!isAuth && (currentRoute == "taskList" || currentRoute?.startsWith("taskDetail/") == true || currentRoute == "logicGate")) {
+                        navController.navigate("login") {
+                            popUpTo("taskList") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
 
                 Scaffold(
                     bottomBar = {
@@ -135,6 +148,14 @@ class MainActivity : ComponentActivity() {
                                                     leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) }
                                                 )
                                                 DropdownMenuItem(
+                                                    text = { Text("Sign Out") },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        authVm.logout()
+                                                    },
+                                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) }
+                                                )
+                                                DropdownMenuItem(
                                                     text = { Text("Sign In") },
                                                     onClick = {
                                                         showMenu = false
@@ -144,14 +165,6 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     },
                                                     leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) }
-                                                )
-                                                DropdownMenuItem(
-                                                    text = { Text("Sign Out") },
-                                                    onClick = {
-                                                        showMenu = false
-                                                        authVm.logout()
-                                                    },
-                                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) }
                                                 )
                                             }
                                         }

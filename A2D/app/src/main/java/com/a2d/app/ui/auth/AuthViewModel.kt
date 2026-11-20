@@ -27,9 +27,14 @@ class AuthViewModel @Inject constructor(
     private val _logoutState = MutableStateFlow<LogoutState>(LogoutState.Idle)
     val logoutState: StateFlow<LogoutState> = _logoutState.asStateFlow()
 
-    fun logout() {
-        if (_logoutState.value is LogoutState.Success) return
+    private val _isAuthenticated = MutableStateFlow(tokenStore.isAuthenticated())
+    val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
 
+    init {
+        _isAuthenticated.value = tokenStore.isAuthenticated()
+    }
+
+    fun logout() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val token = tokenStore.getAccessToken()
@@ -40,6 +45,7 @@ class AuthViewModel @Inject constructor(
                 // Ignore network errors; clear local tokens regardless.
             } finally {
                 tokenStore.clearTokens()
+                _isAuthenticated.value = false
                 _logoutState.value = LogoutState.Success
             }
         }
@@ -47,5 +53,9 @@ class AuthViewModel @Inject constructor(
 
     fun resetLogoutState() {
         _logoutState.value = LogoutState.Idle
+    }
+
+    fun refreshAuthState() {
+        _isAuthenticated.value = tokenStore.isAuthenticated()
     }
 }
