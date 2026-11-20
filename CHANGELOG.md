@@ -6,8 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 - Status: Current
 - Owner: project maintainer
-- Last updated: 2026-11-19
-- Last verified against: code baseline after FEAT-0002 cloud-sync implementation (SyncEngine + network stack)
+- Last updated: 2026-11-20
+- Last verified against: code baseline after FEAT-0003 logout implementation
 
 ## [Unreleased]
 
@@ -146,3 +146,14 @@ hierarchical AND-gate progress system. Includes a logic-gate playground for test
   route, so users can authenticate before tapping Sync. Previously the `login` route existed but was
   unreachable from the task list, so `SyncEngine.sync()` always short-circuited with
   "Not authenticated".
+
+- **Logout functionality (FEAT-0003)** — secure session termination, end-to-end:
+  - `POST /v1/auth/logout` backend endpoint revokes all refresh tokens for the authenticated user
+    (`a2d-cloud/app/api/auth.py`); added `test_logout_success` / `test_logout_unauthorized` tests.
+  - Android: `A2DSyncApi.logout()` (`POST /v1/auth/logout` with Bearer header) and a new
+    `@HiltViewModel AuthViewModel` that calls the endpoint, clears local tokens via
+    `TokenStore.clearTokens()`, and exposes a `LogoutState` StateFlow.
+  - `MainActivity`: 3-dot menu gained a **Sign Out** item (ExitToApp icon) that triggers
+    `AuthViewModel.logout()`; `LaunchedEffect` observes `LogoutState.Success`, resets the state, and
+    navigates to the `login` route (`popUpTo("taskList") { inclusive = true }`).
+
