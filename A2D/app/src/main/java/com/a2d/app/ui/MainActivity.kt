@@ -74,31 +74,33 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     bottomBar = {
-                        NavigationBar {
-                            NavigationBarItem(
-                                selected = onTaskList,
-                                onClick = {
-                                    navController.navigate("taskList") {
-                                        popUpTo("taskList") { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                label = { Text("Tasks") },
-                                icon = {}
-                            )
-                            NavigationBarItem(
-                                selected = currentRoute == "logicGate",
-                                onClick = {
-                                    navController.navigate("logicGate") {
-                                        popUpTo("taskList") { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                label = { Text("Logic Gate") },
-                                icon = {}
-                            )
+                        if (authVm.isAuthenticated.value) {
+                            NavigationBar {
+                                NavigationBarItem(
+                                    selected = onTaskList,
+                                    onClick = {
+                                        navController.navigate("taskList") {
+                                            popUpTo("taskList") { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    label = { Text("Tasks") },
+                                    icon = {}
+                                )
+                                NavigationBarItem(
+                                    selected = currentRoute == "logicGate",
+                                    onClick = {
+                                        navController.navigate("logicGate") {
+                                            popUpTo("taskList") { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    label = { Text("Logic Gate") },
+                                    icon = {}
+                                )
+                            }
                         }
                     }
                 ) { innerPadding ->
