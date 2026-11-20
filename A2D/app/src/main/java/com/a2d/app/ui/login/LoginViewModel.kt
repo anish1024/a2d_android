@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a2d.app.data.network.ApiClient
 import com.a2d.app.data.network.TokenStore
+import com.a2d.app.data.network.HealthResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.Response
@@ -31,6 +33,26 @@ class LoginViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState = _uiState.asStateFlow()
+
+    // Server health status
+    private val _serverHealthy = MutableStateFlow(true)
+    val serverHealthy: StateFlow<Boolean> = _serverHealthy.asStateFlow()
+
+    init {
+        // Check server health on initialization
+        viewModelScope.launch(Dispatchers.IO) {
+            checkServerHealth()
+        }
+    }
+
+    private fun checkServerHealth() {
+        try {
+            val response: Response<HealthResponse> = apiClient.api.healthCheck().execute()
+            _serverHealthy.value = response.isSuccessful && response.body()?.status == "ok"
+        } catch (e: Exception) {
+            _serverHealthy.value = false
+        }
+    }
 
     private val emailRegex = """^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$""".toRegex()
 

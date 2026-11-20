@@ -16,6 +16,9 @@ import retrofit2.http.Query
  * The Bearer token is passed explicitly so the SyncEngine can refresh and retry on 401.
  */
 interface A2DSyncApi {
+    @GET("/healthz")
+    fun healthCheck(): Call<HealthResponse>
+
     @FormUrlEncoded
     @POST("/v1/auth/login")
     fun login(

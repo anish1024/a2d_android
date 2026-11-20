@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -21,6 +22,7 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val serverHealthy by viewModel.serverHealthy.collectAsState()
 
     LaunchedEffect(uiState.loginSucceeded) {
         if (uiState.loginSucceeded) {
@@ -104,6 +106,23 @@ fun LoginScreen(
         if (uiState.isLoading) {
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
+        }
+
+        // Server health status indicator
+        if (serverHealthy) {
+            Text(
+                text = "Server online",
+                color = Color.Green,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        } else {
+            Text(
+                text = "Server offline",
+                color = Color.Red,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
 
         if (uiState.loginError != null) {

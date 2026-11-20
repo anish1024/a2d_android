@@ -64,3 +64,8 @@ sealed class SyncResult {
     data class Failure(val message: String, val uploaded: Int = 0, val downloaded: Int = 0) : SyncResult()
     data object Offline : SyncResult()
 }
+
+/**
+ * Response body for GET /healthz.
+ */
+data class HealthResponse(@SerializedName("status") val status: String = "")
