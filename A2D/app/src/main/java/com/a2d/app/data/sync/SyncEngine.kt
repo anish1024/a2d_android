@@ -161,12 +161,12 @@ class SyncEngine @Inject constructor(
                         id = newId,
                         taskName = taskMap["taskName"]?.toString() ?: "",
                         description = taskMap["description"]?.toString() ?: "",
-                        priority = taskMap["priority"]?.toString()?.toInt() ?: 1,
+                        priority = (taskMap["priority"] as? Number)?.toInt() ?: 1,
                         context = taskMap["context"]?.toString() ?: "No Context",
                         achieved = taskMap["achieved"] as? Boolean ?: false,
                         creationTime = taskMap["creationTime"]?.toString() ?: "",
                         syncId = syncId,
-                        updatedAt = taskMap["updatedAt"]?.toString()?.toLong() ?: 0L,
+                        updatedAt = (taskMap["updatedAt"] as? Number)?.toLong() ?: 0L,
                         deleted = taskMap["deleted"] as? Boolean ?: false,
                         dirty = false
                     )
@@ -184,7 +184,7 @@ class SyncEngine @Inject constructor(
                         description = itemMap["description"]?.toString() ?: "",
                         achieved = itemMap["achieved"] as? Boolean ?: false,
                         syncId = syncId,
-                        updatedAt = itemMap["updatedAt"]?.toString()?.toLong() ?: 0L,
+                        updatedAt = (itemMap["updatedAt"] as? Number)?.toLong() ?: 0L,
                         deleted = itemMap["deleted"] as? Boolean ?: false,
                         dirty = false
                     )
