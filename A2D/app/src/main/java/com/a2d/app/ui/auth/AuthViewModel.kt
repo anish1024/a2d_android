@@ -38,8 +38,15 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 apiClient.api.logout().execute()
+                // Clear local tokens and mark as not authenticated
+                tokenStore.clearTokens()
+                _isAuthenticated.value = false
+                _logoutState.value = LogoutState.Success
             } catch (_: Exception) {
                 // Ignore network errors; clear local tokens regardless.
+                tokenStore.clearTokens()
+                _isAuthenticated.value = false
+                _logoutState.value = LogoutState.Error("Logout failed")
             }
         }
     }
