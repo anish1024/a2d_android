@@ -1551,7 +1551,7 @@ Cloud (new): `a2d-cloud/**` as laid out in §10. Deployment: `Deployment/a2d-clo
 ## 18. Docs to update
 
 - [ ] `README.md` — architecture, toolchain, repository map, run commands (on implementation)
-- [ ] `AGENT.md` — new file map, sync boundaries, "never edit gate semantics for sync" rule
+- [ ] `AGENTS.md` — new file map, sync boundaries, "never edit gate semantics for sync" rule
 - [ ] `docs/adr/0002-cloud-sync-architecture.md` — accepted decision record (created 2026-11-16)
 - [ ] `Deployment/a2d-cloud/` — supervisord drop-in, env template, deploy/invite/backup/restore scripts, cron example, and runbook (deploy, invite, archive/restore, TLS, retention)
 - [ ] `CHANGELOG.md` — 1.1.0 entry

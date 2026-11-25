@@ -1,12 +1,12 @@
-# AGENT.md — Targeted Change Guide for A2D Android
+# AGENTS.md — Targeted Change Guide for A2D Android
 
 This file is for a small local coding agent (for example a Qwen-class 9B model) that needs to make a
 **small, targeted change or bug fix** without loading the whole project into context.
 
-For deep architecture, history, and design rationale, read **[`README.md`](README.md)**. Archived
+For deep architecture, history, and design rationale, read **[`docs/README.md`](docs/README.md)**. Archived
 Markdown under `docs/archive/` is historical and must not be used as current implementation guidance.
 
-> **Last verified:** 2026-11-06 · code baseline `8d3b7f4`
+> **Last verified:** 2026-11-24 · code baseline `8d3b7f4`
 
 ---
 
@@ -79,7 +79,7 @@ Files that **do not exist** anymore (do not add code to them): `TaskScreen.kt`, 
 
 Project documents:
 
-- `README.md` — canonical current-state architecture and behavior.
+- `docs/README.md` — canonical current-state architecture and behavior.
 - `CHANGELOG.md` — versioned release notes.
 - `docs/history/implementation-log.md` — historical + current implementation log and verified commit IDs.
 - `docs/known-issues.md` — recurring bugs, limitations, and workarounds.
@@ -112,7 +112,7 @@ ID/date/topic, and open at most one shard. If the index is ambiguous, run
 | Change persistence/query order | `data/local/dao/TaskDao.kt`, `data/repository/TaskRepositoryImpl.kt` |
 | Change DI construction | `di/AppModule.kt` or the class's `@Inject constructor` |
 | Change device install/launch | `Deployment/a2d_deploy.sh` |
-| Change device prerequisite docs | `Deployment/a2d_build.md` |
+| Change device prerequisite docs | `docs/a2d_build.md` |
 
 ---
 
@@ -261,8 +261,8 @@ For a targeted change, the task is done when:
 - `./gradlew compileDebugKotlin` passes.
 - Relevant unit tests pass (`./gradlew test`, or a focused `--tests` run).
 - UI behavior matches the requested change without altering the two-tier gate semantics.
-- If behavior or setup changed, update the relevant section of `README.md` (and
-  `Deployment/a2d_build.md` for deployment changes).
+- If behavior or setup changed, update the relevant section of `docs/README.md` (and
+  `docs/a2d_build.md` for deployment changes).
 - If code changed, append an entry to `docs/history/implementation-log.md`. Record
   `Commit: <short-sha>` **only after** the build/tests pass; otherwise use `Commit: pending` or
   `Commit: blocked — tests failed`.

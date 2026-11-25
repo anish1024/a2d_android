@@ -35,7 +35,7 @@ class TokenStore(private val context: Context) {
         accessToken: String,
         refreshToken: String,
         expiresIn: Int,
-        userId: Long,
+        userId: String,
         email: String
     ) {
         val now = System.currentTimeMillis()
@@ -107,7 +107,7 @@ class TokenStore(private val context: Context) {
             val accessToken: String,
             val refreshToken: String,
             val expiresAt: Long,
-            val userId: Long,
+            val userId: String,
             val email: String,
             val deviceId: String
         )

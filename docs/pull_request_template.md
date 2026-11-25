@@ -21,7 +21,7 @@
 ## Documentation
 
 - [ ] `README.md` updated if behavior/architecture/toolchain changed
-- [ ] `AGENT.md` updated if file map/commands/rules changed
+- [ ] `AGENTS.md` updated if file map/commands/rules changed
 - [ ] Implementation-log entry appended; commit SHA added only after the green build/tests
 - [ ] `CHANGELOG.md` updated for user-visible changes
 - [ ] Release: `versionCode`/`versionName` bumped, versioned CHANGELOG section + user-facing note added

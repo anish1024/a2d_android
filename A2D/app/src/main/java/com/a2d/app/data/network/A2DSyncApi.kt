@@ -28,27 +28,23 @@ interface A2DSyncApi {
 
     @GET("/v1/auth/refresh")
     fun refreshToken(
-        @Header("Authorization") token: String
+        @Header("Idempotency-Key") idempotencyKey: String?,
     ): Call<AuthResponse>
 
     @POST("/v1/sync/backup")
     fun syncBackup(
-        @Header("Authorization") token: String,
         @Header("Idempotency-Key") idempotencyKey: String?,
         @Body() request: SyncBackupRequest
     ): Call<SyncBackupResponse>
 
     @GET("/v1/sync/updates")
     fun syncUpdates(
-        @Header("Authorization") token: String,
         @Query("lastDownloadAt") lastDownloadAt: String,
         @Query("limit") limit: Int = 500
     ): Call<SyncUpdatesResponse>
 
     @POST("/v1/auth/logout")
-    fun logout(
-        @Header("Authorization") token: String
-    ): Call<Unit>
+    fun logout(): Call<Unit>
 }
 
 /**
@@ -59,6 +55,6 @@ data class AuthResponse(
     @SerializedName("refresh_token") val refreshToken: String,
     @SerializedName("token_type") val tokenType: String,
     @SerializedName("expires_in") val expiresIn: Int,
-    @SerializedName("user_id") val userId: Long,
+    @SerializedName("user_id") val userId: String,
     @SerializedName("email") val email: String = ""
 )

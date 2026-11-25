@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 - Status: Current
 - Owner: project maintainer
-- Last updated: 2026-11-20
+- Last updated: 2026-11-24
 - Last verified against: code baseline after FEAT-0003 logout implementation
 
 ## [Unreleased]
@@ -89,6 +89,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   added so existing call sites compile unchanged).
 
 ### Fixed
+
+- **Login JSON type mismatch (cloud sync).** Backend returns `user_id` as a string UUID (e.g.
+  `"Za64levcU1nje73vI7xwTQ"`), but `AuthResponse.userId` in the Android client was typed as `Long`,
+  causing Gson parsing to fail and the generic "Unable to connect" error. Changed `userId` to `String`
+  in `A2DSyncApi.kt` and `TokenStore.kt` (both the data class and the `saveTokens`/`Tokens` signatures).
+  Compile passes; login now succeeds on device.
+
+- **Cloud sync 400 (duplicate Authorization headers).** The OkHttp interceptor in `ApiClient` added
+  `Authorization: Bearer <token>` to every request, and each Retrofit method also declared
+  `@Header("Authorization") token` where callers passed `"Bearer $token"`. This produced two
+  Authorization headers (one with a double `Bearer Bearer`), which Cloudflare rejected with
+  `400 <html>` before the request reached FastAPI. Removed the per-method `@Header("Authorization")`
+  parameters from `A2DSyncApi` (`syncBackup`, `syncUpdates`, `refreshToken`, `logout`) and dropped the
+  `token` arguments from the `SyncEngine` / `AuthViewModel` call sites. All sync/auth endpoints now
+  return 200 OK from the device.
+
+- **Sign In menu item removed.** Removed the **Sign In** entry from the task-list 3-dot overflow menu in
+  `MainActivity`; only **Sync** and **Sign Out** remain, matching the authenticated session state.
+
+- **Tenant directory ownership (backend).** `Deployment/a2d-cloud/deploy.sh` now runs
+  `chown -R "$A2D_RUN_USER:$A2D_RUN_GROUP" "$A2D_DATA_DIR/users"` after `migrate-users` so tenant
+  directories created by manual CLI runs are owned by the service user. This prevents the
+  `PermissionError: [Errno 1] Operation not permitted` that caused 500s on `/v1/sync/backup`.
 
 - Task card duplicate description: the task description is now rendered exactly once per task card
   (in the card header, directly below the task name); the redundant copy previously shown in the

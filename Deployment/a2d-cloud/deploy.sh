@@ -220,6 +220,11 @@ install_env_file
 log "applying tenant migrations"
 as_run_user -m app.cli migrate-users
 
+# Ensure tenant directories are owned by the service user.
+# This fixes any directories created by manual root-run CLI invocations.
+log "fixing tenant directory ownership"
+chown -R "$A2D_RUN_USER:$A2D_RUN_GROUP" "$A2D_DATA_DIR/users"
+
 write_supervisor_conf
 
 log "reloading supervisord"

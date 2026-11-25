@@ -1,5 +1,6 @@
 package com.a2d.app.ui.login
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a2d.app.data.network.ApiClient
@@ -116,6 +117,7 @@ class LoginViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Log.e("LoginViewModel", "Login request failed", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     loginError = "Unable to connect. Check your internet and try again."

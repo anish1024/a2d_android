@@ -157,17 +157,6 @@ class MainActivity : ComponentActivity() {
                                                     },
                                                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) }
                                                 )
-                                                DropdownMenuItem(
-                                                    text = { Text("Sign In") },
-                                                    onClick = {
-                                                        showMenu = false
-                                                        navController.navigate("login") {
-                                                            popUpTo("taskList") { inclusive = true }
-                                                            launchSingleTop = true
-                                                        }
-                                                    },
-                                                    leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) }
-                                                )
                                             }
                                         }
                                     )

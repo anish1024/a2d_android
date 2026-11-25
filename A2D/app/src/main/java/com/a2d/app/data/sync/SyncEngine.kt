@@ -102,17 +102,18 @@ class SyncEngine @Inject constructor(
             ),
             lastBackupAt = syncDao.getSyncState()?.lastBackupAt ?: 0L
         )
+        android.util.Log.d("A2D_Sync", "REQUEST BODY: ${request.tables}")
 
-        val token = tokenStore.getAccessToken()
         val idempotencyKey = UUID.randomUUID().toString()
         val response: Response<SyncBackupResponse> = apiClient.api.syncBackup(
-            token = "Bearer $token",
             idempotencyKey = idempotencyKey,
             request = request
         ).execute()
 
         if (!response.isSuccessful) {
-            throw IllegalStateException("Upload failed: ${response.code()} ${response.message()}")
+            val errBody = try { response.errorBody()?.string() } catch (_: Exception) { null }
+            android.util.Log.e("A2D_Sync", "Upload failed ${response.code()}: $errBody")
+            throw IllegalStateException("Upload failed: ${response.code()} $errBody")
         }
 
         val body = response.body() ?: throw IllegalStateException("Empty response body")
@@ -128,14 +129,12 @@ class SyncEngine @Inject constructor(
     }
 
     private suspend fun downloadUpdates(): Int {
-        val token = tokenStore.getAccessToken()
         var cursor = syncDao.getSyncState()?.lastDownloadAt ?: ""
         var total = 0
         var cursorValid = true
 
         while (cursorValid) {
             val response: Response<SyncUpdatesResponse> = apiClient.api.syncUpdates(
-                token = "Bearer $token",
                 lastDownloadAt = cursor,
                 limit = MAX_BATCH_ROWS
             ).execute()
