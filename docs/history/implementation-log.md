@@ -67,7 +67,7 @@ Read this table first. Open **at most one** shard.
 | 2026-10 | Environment, project config, domain, gate engines, tests, Room, repository, DI | — | [Milestones 0–2](implementation-log/2026-10-milestones-0-2.md) | ~2.9k |
 | 2026-10 | Compose theme, ViewModels, screens, USB deployment, signing, release bundle, Play checklist | — | [Milestones 3–4](implementation-log/2026-10-milestones-3-4.md) | ~2.3k |
 | 2026-10 | Task card redesign T1–T7 and verification | FEAT-0001 | [Task card redesign](implementation-log/2026-10-redesign-01.md) | ~3k |
-| 2026-11 | Documentation restructuring, agent routing, deployment docs, history split | DOCS-0001 | [2026-11](implementation-log/2026-11.md) | ~0.7k |
+| 2026-11 | Documentation restructuring, agent routing, deployment docs, release notes, history split, docs consolidation | DOCS-0002 | [2026-11](implementation-log/2026-11.md) | ~0.9k |
 
 Shards are chronological. Each shard links back here and to its previous/next shard.
 

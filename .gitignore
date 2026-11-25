@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+*.egg
+
+# Databases (runtime state, never commit)
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Test artifacts
+test.db
+test.db-wal
+test.db-shm
+*.log
+.coverage
+htmlcov/
+
+# Android Room package path ("data/") is not runtime data; keep the Room migration source tracked
+!A2D/app/src/main/java/com/a2d/app/data/local/RoomMigration.kt
+!A2D/app/src/main/java/com/a2d/app/data/local/dao/SyncDao.kt
+!A2D/app/src/main/java/com/a2d/app/data/local/dao/TaskDao.kt
+!A2D/app/src/main/java/com/a2d/app/data/network/SyncEngine.kt
+!A2D/app/src/main/java/com/a2d/app/data/network/ApiModels.kt
+!A2D/app/src/main/java/com/a2d/app/data/network/ApiClient.kt
+!A2D/app/src/main/java/com/a2d/app/data/network/A2DSyncApi.kt
+!A2D/app/src/main/java/com/a2d/app/data/network/TokenStore.kt
+!A2D/app/src/main/java/com/a2d/app/domain/model/Task.kt
+!A2D/app/src/main/java/com/a2d/app/domain/model/ActionItem.kt

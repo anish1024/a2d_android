@@ -1,0 +1,24 @@
+[project]
+name = "a2d-cloud"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "python-multipart",
+    "sqlalchemy[asyncio]",
+    "alembic",
+    "pydantic-settings",
+]
+
+[project.scripts]
+a2d-cloud = "app.main:cli"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]

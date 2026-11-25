@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2d.example.com/schema/a2d-tasks-v1.schema.json",
+  "title": "A2D Tasks",
+  "description": "Canonical data contract for A2D task and activity rows.",
+  "type": "object",
+  "required": ["format", "formatVersion", "exportedAt", "source", "tasks"],
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "a2d.tasks"
+    },
+    "formatVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time",
+      "examples": ["2026-11-15T08:30:00Z"]
+    },
+    "source": {
+      "type": "object",
+      "required": ["app", "version", "deviceId"],
+      "properties": {
+        "app": {
+          "type": "string",
+          "const": "a2d-android"
+        },
+        "version": {
+          "type": "string",
+          "examples": ["1.1.0"]
+        },
+        "deviceId": {
+          "type": "string",
+          "examples": ["8f0e5a6b7c8d9e"]
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/task"
+      }
+    }
+  },
+  "definitions": {
+    "task": {
+      "type": "object",
+      "required": ["syncId", "taskName", "description", "priority", "context", "achieved", "creationTime", "updatedAt", "deleted", "activities"],
+      "properties": {
+        "syncId": {
+          "type": "string",
+          "format": "uuid",
+          "examples": ["1f0c3d4e-5a6b-4c7d-8e9f-0a1b2c3d4e5f"]
+        },
+        "taskName": {
+          "type": "string",
+          "examples": ["Morning Focus"]
+        },
+        "description": {
+          "type": "string",
+          "examples": ["Start day"]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1,
+          "examples": [1]
+        },
+        "context": {
+          "type": "string",
+          "examples": ["Daily Routine"]
+        },
+        "achieved": {
+          "type": "boolean",
+          "examples": [false]
+        },
+        "creationTime": {
+          "type": "string",
+          "format": "date-time",
+          "examples": ["2026-11-15T08:00:00Z"]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "examples": ["2026-11-15T08:25:00Z"]
+        },
+        "deleted": {
+          "type": "boolean",
+          "examples": [false]
+        },
+        "activities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/activity"
+          }
+        }
+      }
+    },
+    "activity": {
+      "type": "object",
+      "required": ["syncId", "description", "achieved", "updatedAt"],
+      "properties": {
+        "syncId": {
+          "type": "string",
+          "examples": ["2a1b5c6d7e8f9a0b1c2d3e4f5a6b7c8d"]
+        },
+        "description": {
+          "type": "string",
+          "examples": ["Drink water"]
+        },
+        "achieved": {
+          "type": "boolean",
+          "examples": [true]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "examples": ["2026-11-15T08:20:00Z"]
+        }
+      }
+    }
+  }
+}

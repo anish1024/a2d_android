@@ -11,7 +11,7 @@ user-visible fixes; use this file when an issue recurs or needs a workaround.
 
 1. **First occurrence** → `CHANGELOG.md` entry only.
 2. **Second occurrence / workaround needed** → add an entry here.
-3. **Third occurrence or architectural cause** → ADR + regression test + `AGENT.md` note.
+3. **Third occurrence or architectural cause** → ADR + regression test + `AGENTS.md` note.
 
 ## Issue template
 
@@ -58,7 +58,7 @@ user-visible fixes; use this file when an issue recurs or needs a workaround.
 - Symptom: `Deployment/a2d_deploy.sh` requires an authorized ADB device; none is attached in the
   current development environment.
 - Root cause: manual environment prerequisite.
-- Workaround: follow `Deployment/a2d_build.md`, then run `./Deployment/a2d_deploy.sh`.
+- Workaround: follow `docs/a2d_build.md`, then run `./Deployment/a2d_deploy.sh`.
 - Fix / regression test: deploy to a physical device and record the result in the implementation log.
 
 ## Fixed

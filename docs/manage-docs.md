@@ -76,14 +76,14 @@ too small to need it, and the omission must be recorded in the repository profil
 
 | Role | Default location | Purpose | Update trigger |
 | --- | --- | --- | --- |
-| **Entry point / current truth** | `README.md` | What the project does today: purpose, architecture, setup, current status, links | Behavior, architecture, toolchain, or current status changes |
-| **Agent router** (optional) | `AGENT.md` | Fast task→file routing, rules, commands, and common failures for coding agents | File map, commands, architecture rules, or recurring failure patterns change |
-| **Documentation index** | `docs/INDEX.md` | Every maintained document with status, purpose, and last-updated date | A document is added, moved, archived, or retired |
+| **Entry point / current truth** | `docs/README.md` | What the project does today: purpose, architecture, setup, current status, links | Behavior, architecture, toolchain, or current status changes |
+| **Agent router** (optional) | `AGENTS.md` | Fast task→file routing, rules, commands, and common failures for coding agents | File map, commands, architecture rules, or recurring failure patterns change |
+| **Documentation index** | `README.md` | Every maintained document with status, purpose, and last-updated date | A document is added, moved, archived, or retired |
 | **Decisions** | `docs/adr/NNNN-*.md` | Why a significant choice was made, including alternatives and consequences | Schema, dependency, architecture, security, or deployment decision |
 | **Feature records** | `docs/features/FEAT-*.md` | Proposed, in-progress, and completed feature design | New feature, enhancement, or behavior change |
 | **Operations** | `docs/operations/` or `Deployment/` | Setup, deployment, runbooks, device or environment prerequisites | Deployment flow, environment, or operations procedure changes |
 | **Known issues** | `docs/known-issues.md` | Recurring bugs, limitations, and workarounds | A bug recurs or needs a workaround |
-| **Release notes** | `CHANGELOG.md` | Versioned, user-facing and technical changes for every release | Every version bump and release |
+| **Release notes** | `docs/CHANGELOG.md` | Versioned, user-facing and technical changes for every release | Every version bump and release |
 | **History** | `docs/history/implementation-log.md` (index) + `docs/history/implementation-log/` (shards) | Internal task/milestone record with verification and commit IDs | Any code change or completed task |
 | **Archive** | `docs/archive/` | Superseded or historical material, never current guidance | A document becomes obsolete or is replaced |
 
@@ -96,14 +96,14 @@ the repository profile.
 
 ```text
 <repo>/
-├── README.md                     # current truth and entry point
-├── AGENT.md                      # optional agent routing guide
-├── CHANGELOG.md                  # versioned release notes
+├── README.md                     # Documentation index (moved from docs/INDEX.md)
+├── AGENTS.md                      # optional agent routing guide
 ├── manage-docs.md                # this policy
 ├── .github/
 │   └── pull_request_template.md  # verification and documentation checklist
 ├── docs/
-│   ├── INDEX.md                  # every maintained document
+│   ├── CHANGELOG.md              # versioned release notes
+│   ├── README.md                      # Current truth and entry point
 │   ├── adr/
 │   │   ├── _TEMPLATE.md
 │   │   └── NNNN-title.md
@@ -128,7 +128,7 @@ Rules:
 - Do not keep two live copies of the same document in different directories.
 - Keep the archive self-contained and clearly marked; never link to it as current guidance.
 - Put project-specific long-form references (schemas, blueprints, generated inventories) under
-  `docs/` or `docs/reference/` and list them in `docs/INDEX.md`.
+  `docs/` or `docs/reference/` and list them in `README.md`.
 
 ---
 
@@ -144,13 +144,14 @@ replace those values, do not treat them as defaults.
 | Build command | Command that produces the shipped/debug artifact | `cd A2D && ./gradlew assembleDebug` |
 | Release command | Command that produces the release artifact | `cd A2D && ./gradlew bundleRelease` |
 | Artifact path | Where build output is written | `A2D/app/build/outputs/` |
-| Deployment docs | Setup and install/launch documentation | `Deployment/a2d_build.md`, `Deployment/a2d_deploy.sh` |
+| Deployment docs | Setup and install/launch documentation | `docs/a2d_build.md`, `docs/Deployment/a2d-cloud/README.md`, `Deployment/a2d_deploy.sh` |
 | Platform / release target | Store, package format, or deployment channel | Android / Play Store (AAB) |
 | Implementation log | Router + shard directory | `docs/history/implementation-log.md` + `docs/history/implementation-log/` |
 | Known issues | Path to the issue register | `docs/known-issues.md` |
 | Doc check command | Link/anchor/fence check, or `manual` | `manual` (run before docs commits) |
+| Documentation layout | Where maintained Markdown lives (deviation from §3 default) | Root: `README.md` (documentation index / entry point) and `AGENTS.md` (agent router). All other maintained `.md` files live under `docs/`: current truth `docs/README.md`, policy `docs/manage-docs.md`, release notes `docs/CHANGELOG.md`, PR template `docs/pull_request_template.md`, cloud runbook `docs/Deployment/a2d-cloud/README.md`. |
 | Default branch | Branch releases are cut from | `main` |
-| Agent guide size limit | Maximum lines for `AGENT.md`, if one exists | ~300 lines |
+| Agent guide size limit | Maximum lines for `AGENTS.md`, if one exists | ~300 lines |
 
 If a repository has no formal release process, set the release fields to `none` and keep the
 changelog under `[Unreleased]` until a release exists.
@@ -162,17 +163,17 @@ changelog under `[Unreleased]` until a release exists.
 | Change | Required documentation |
 | --- | --- |
 | Code change with no user-visible effect | Implementation-log entry |
-| User-visible behavior or UI change | `CHANGELOG.md`; update `README.md` if current behavior changed |
+| User-visible behavior or UI change | `CHANGELOG.md`; update `docs/README.md` if current behavior changed |
 | Bug fix | `CHANGELOG.md`; add to `docs/known-issues.md` if it has occurred before or has a workaround |
 | Recurring bug | `docs/known-issues.md` **and** a regression test; add an agent troubleshooting note if it is easy to reintroduce |
-| New feature / enhancement | New `docs/features/FEAT-XXXX.md` before implementation; after completion update `README.md` + `CHANGELOG.md`; set the feature status to **Implemented** |
+| New feature / enhancement | New `docs/features/FEAT-XXXX.md` before implementation; after completion update `docs/README.md` + `CHANGELOG.md`; set the feature status to **Implemented** |
 | Version bump / release | `CHANGELOG.md` versioned section + the version source in the profile; record the release commit only after the build/tests pass |
-| Architecture, domain, or public-contract change | `README.md` + tests + ADR if semantics or trade-offs changed |
-| Data/storage schema change | ADR + migration notes + `README.md` repository map + agent boundaries |
-| Dependency/toolchain upgrade | `README.md` current-state/toolchain section + ADR + agent commands/versions |
-| Deployment/operations change | Operations document + agent guide + the deployment section of `README.md` |
-| File/package/module move | Agent file map + `README.md` repository map + `docs/INDEX.md` |
-| Document added, moved, or archived | `docs/INDEX.md`; fix all inbound links |
+| Architecture, domain, or public-contract change | `docs/README.md` + tests + ADR if semantics or trade-offs changed |
+| Data/storage schema change | ADR + migration notes + `docs/README.md` repository map + agent boundaries |
+| Dependency/toolchain upgrade | `docs/README.md` current-state/toolchain section + ADR + agent commands/versions |
+| Deployment/operations change | Operations document + agent guide + the deployment section of `docs/README.md` |
+| File/package/module move | Agent file map + `docs/README.md` repository map + `docs/README.md` |
+| Document added, moved, or archived | `docs/README.md`; fix all inbound links |
 | Abandoned feature | Mark the feature record **Superseded** or **Rejected**, do not delete it |
 
 ### 5.1 Bug escalation rule
@@ -319,9 +320,9 @@ Additional rules:
 
 ## 8. Status metadata and freshness
 
-Every maintained narrative document except `README.md` and `AGENT.md` carries explicit status
-metadata at the top. Templates and the pull-request template use placeholders instead. `README.md`
-and `AGENT.md` carry a last-verified line, because they are entry points and have no meaningful
+Every maintained narrative document except `docs/README.md` and `AGENTS.md` carries explicit status
+metadata at the top. Templates and the pull-request template use placeholders instead. `docs/README.md`
+and `AGENTS.md` carry a last-verified line, because they are entry points and have no meaningful
 `Status` beyond “current”.
 
 ```markdown
@@ -352,7 +353,7 @@ and `AGENT.md` carry a last-verified line, because they are entry points and hav
 ### 8.2 Freshness rules
 
 - Use ISO 8601 dates (`YYYY-MM-DD`).
-- `README.md`, `AGENT.md`, and `docs/INDEX.md` carry a last-verified line with a date and commit.
+- `docs/README.md`, `AGENTS.md`, and root `README.md` carry a last-verified line with a date and commit.
 - Archived documents keep their original content but gain an `Archived` banner at the top, with the
   archive date and a link to the current entry point.
 - When a document moves or is renumbered, re-check its status, date, and inbound links.
@@ -362,7 +363,7 @@ and `AGENT.md` carry a last-verified line, because they are entry points and hav
 ## 9. Templates
 
 Templates are files, not copies pasted into this policy. Create them once in the repository and link
-to them from `docs/INDEX.md`; copies drift.
+to them from `README.md`; copies drift.
 
 | Document type | Default template | Required metadata | Required sections |
 | --- | --- | --- | --- |
@@ -421,14 +422,14 @@ model that must read it.
   | --- | --- | --- | --- | --- |
   | 2026-Q4 | Setup, core domain, redesign | FEAT-0001 | `implementation-log/2026-Q4.md` | ~3k |
 
-- `docs/INDEX.md` links only the history index; the history index links the shards. Do not duplicate
-  index rows at both levels.
+- Root `README.md` (documentation index) links only the history index; the history index links the
+  shards. Do not duplicate index rows at both levels.
 - Feature-based navigation belongs in the index table (feature ID → shard + anchor), not in separate
   per-feature log files.
 - Keep entries short: one task per entry, 10–30 lines, no code dumps; link to files and commits.
 - Use relative Markdown links, not generated HTML, so agents and diffs can read them.
 
-**Agent retrieval protocol** (mirrored in `AGENT.md`):
+**Agent retrieval protocol** (mirrored in `AGENTS.md`):
 
 1. Read only the index table in `docs/history/implementation-log.md`.
 2. Match by feature ID, date, or topic, and open **at most one** shard.
@@ -444,7 +445,7 @@ model that must read it.
 - Require the checklist to cover: build/tests, README/agent updates, the implementation-log SHA
   rule, the changelog entry, release metadata, feature/ADR/known-issue updates, and the docs
   link/fence check.
-- `docs/INDEX.md` must link every maintained document with its status and last-updated date.
+- Root `README.md` (documentation index) must link every maintained document with its status and last-updated date.
 - Add a link/anchor/fence check to CI where possible. If no CI exists, run the check manually before
   committing docs, and record it in the implementation log.
 - A reviewer may block a change whose docs are stale, missing, or link to archived material as if it
@@ -457,9 +458,9 @@ model that must read it.
 Use this when applying the policy to a repository for the first time.
 
 - [ ] Copy `manage-docs.md` to the repository root and fill in §4.
-- [ ] Create or confirm `README.md` as the current-truth entry point.
+- [ ] Create or confirm `docs/README.md` as the current-truth entry point.
 - [ ] Create `CHANGELOG.md` with an `[Unreleased]` section.
-- [ ] Create `docs/INDEX.md` and list every maintained document.
+- [ ] Create root `README.md` and list every maintained document.
 - [ ] Create `docs/history/implementation-log.md` with the entry template and commit-ID rule.
 - [ ] Create shard files under `docs/history/implementation-log/` (e.g., `YYYY-MM.md`, `YYYY-QN.md`)
       and add the history index table to the log router when history exceeds the §10.1 budget.
@@ -478,9 +479,9 @@ Use this when applying the policy to a repository for the first time.
 
 Run this before a release, after a major refactor, or at a fixed interval (for example quarterly).
 
-- [ ] `docs/INDEX.md` matches the files on disk; every row has a valid link and status.
+- [ ] Root `README.md` matches the files on disk; every row has a valid link and status.
 - [ ] All local links, anchors, and code fences resolve.
-- [ ] `README.md` is still current-state only; history and specs live in their own documents.
+- [ ] Root `README.md` is still index-only; current-state documentation lives in `docs/README.md`.
 - [ ] `CHANGELOG.md` has a section matching every released version and the current version source.
 - [ ] Implementation-log entries with a SHA have green verification for that exact commit.
 - [ ] History shards are within the token budget (see §10.1) and the history index links each shard.

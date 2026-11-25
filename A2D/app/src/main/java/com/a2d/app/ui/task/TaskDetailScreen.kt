@@ -23,10 +23,12 @@ fun TaskDetailScreen(
     onToggleActivity: (Long, Long, Boolean) -> Unit,
     onAddActivity: (Long) -> Unit,
     onDeleteActivity: (Long, Long) -> Unit,
-    onDeleteTask: (Long) -> Unit
+    onDeleteTask: (Long) -> Unit,
+    onMoveTaskActivity: (Long, Long, Boolean) -> Unit
 ) {
     var showTaskDeleteDialog by remember { mutableStateOf(false) }
     var pendingActivityDeleteId by remember { mutableStateOf<Long?>(null) }
+    var draggingActivityId by remember { mutableStateOf<Long?>(null) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -67,10 +69,17 @@ fun TaskDetailScreen(
                 items(task.activities, key = { it.id }) { activity ->
                     ActivityRow(
                         activity = activity,
-                        onCheckedChange = {
+                        onMoveUp = { onMoveTaskActivity(taskId, activity.id, true) },
+                        onMoveDown = { onMoveTaskActivity(taskId, activity.id, false) },
+                        onToggleActivity = {
                             onToggleActivity(taskId, activity.id, it)
                         },
-                        onDelete = { pendingActivityDeleteId = activity.id }
+                        onDelete = { pendingActivityDeleteId = activity.id },
+                        isDragging = draggingActivityId == activity.id,
+                        onDragStateChange = { dragging ->
+                            draggingActivityId = if (dragging) activity.id else null
+                        },
+                        modifier = Modifier.animateItem()
                     )
                 }
             }

@@ -43,7 +43,7 @@ two-tier pipeline? If yes, describe the new semantics and the tests that prove t
 ## Docs to update
 
 - [ ] `README.md` (current behavior/architecture)
-- [ ] `AGENT.md` (file map/rules/commands, if changed)
+- [ ] `AGENTS.md` (file map/rules/commands, if changed)
 - [ ] `CHANGELOG.md` (user-visible change)
 - [ ] `docs/history/implementation-log.md` (on completion, with a verified commit SHA)
 - [ ] `docs/known-issues.md` (if a recurring bug/workaround)

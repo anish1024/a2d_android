@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.room)
 }
 
 // 1. Load keystore.properties from the root project directory
@@ -21,6 +22,14 @@ android {
     namespace = "com.a2d.app"
     compileSdk = 34
 
+    room {
+        schemaDirectory("schemas")
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.a2d.app"
         minSdk = 26
@@ -30,6 +39,12 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        buildConfigField(
+            "String",
+            "A2D_CLOUD_BASE_URL",
+            "\"https://devapp8000.anisandbox.org/\""
+        )
     }
 
     signingConfigs {
@@ -90,6 +105,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.hilt.android)
@@ -102,8 +118,21 @@ dependencies {
 
     implementation(libs.coroutines.android)
 
+    // Cloud sync (FEAT-0002) — HTTP client + JSON + encrypted token store
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

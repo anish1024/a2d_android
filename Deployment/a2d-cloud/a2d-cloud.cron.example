@@ -1,0 +1,22 @@
+# =============================================================================
+# A2D cloud - nightly maintenance schedule
+#
+# Install as a host crontab entry for the deployment user:
+#   crontab -e
+# Then replace /srv/a2d_android with this checkout's parent path.
+#
+# Use `flock -n` so a slow backup never overlaps the next run. The app runs as
+# the service user; backup files are mode 0600 and may need sudo to inspect.
+# =============================================================================
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Nightly recovery set at 03:15 UTC.
+15 3 * * * cd /opt/a2d-cloud && flock -n /tmp/a2d-cloud-backup.lock ./backup.sh >> logs/backup.log 2>&1
+
+# Hash-gated daily archives at 03:45 UTC (one per changed tenant).
+45 3 * * * cd /opt/a2d-cloud && flock -n /tmp/a2d-cloud-archive.lock ./as_run_user -m app.cli archive --all >> logs/archive.log 2>&1
+
+# Expired tokens, tombstones, idempotency keys, and old archives at 04:15 UTC.
+15 4 * * * cd /opt/a2d-cloud && flock -n /tmp/a2d-cloud-prune.lock ./as_run_user -m app.cli prune >> logs/prune.log 2>&1

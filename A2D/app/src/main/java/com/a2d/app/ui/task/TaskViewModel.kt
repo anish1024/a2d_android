@@ -3,6 +3,8 @@ package com.a2d.app.ui.task
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a2d.app.data.repository.TaskRepositoryImpl
+import com.a2d.app.data.network.SyncResult
+import com.a2d.app.data.sync.SyncEngine
 import com.a2d.app.domain.engine.SerialAndGateProcessor
 import com.a2d.app.domain.engine.TaskListPipelineProcessor
 import com.a2d.app.domain.model.ActionItem
@@ -21,7 +23,8 @@ import javax.inject.Inject
 class TaskViewModel @Inject constructor(
     private val repository: TaskRepositoryImpl,
     private val gateProcessor: SerialAndGateProcessor,
-    private val pipelineProcessor: TaskListPipelineProcessor
+    private val pipelineProcessor: TaskListPipelineProcessor,
+    private val syncEngine: SyncEngine
 ) : ViewModel() {
 
     val tasks: StateFlow<List<Task>> = repository.getAllTasks()
@@ -103,10 +106,137 @@ class TaskViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Update a task's name and description in-place. Trims inputs; a blank name falls back to the
+     * current name. Skips the write if nothing changed.
+     */
+    fun updateTask(taskId: Long, newName: String, newDescription: String) {
+        viewModelScope.launch {
+            val task = repository.getTask(taskId) ?: return@launch
+
+            val trimmedName = newName.trim()
+            val trimmedDescription = newDescription.trim()
+            val finalName = trimmedName.ifBlank { task.taskName }
+
+            if (finalName == task.taskName && trimmedDescription == task.description) {
+                return@launch // nothing changed — skip the write
+            }
+
+            val updated = task.copy(
+                taskName = finalName,
+                description = trimmedDescription
+            )
+            repository.saveTask(updated)
+        }
+    }
+
+    /**
+     * Update a single activity's description text. Trims input; a blank description falls back to
+     * the current one. Description text does not affect achievement, so no gate/pipeline recalc.
+     */
+    fun updateActivity(taskId: Long, activityId: Long, newDescription: String) {
+        viewModelScope.launch {
+            val task = repository.getTask(taskId) ?: return@launch
+            val current = task.activities.find { it.id == activityId } ?: return@launch
+
+            val finalDescription = newDescription.trim().ifBlank { current.description }
+
+            if (finalDescription == current.description) {
+                return@launch // nothing changed — skip the write
+            }
+
+            task.activities = task.activities.map {
+                if (it.id == activityId) it.copy(description = finalDescription) else it
+            }
+            repository.saveTask(task)
+        }
+    }
+
     fun deleteTask(taskId: Long) {
         viewModelScope.launch {
             repository.deleteTask(taskId)
             recalculatePipeline()
+        }
+    }
+
+    /**
+     * Move a task up or down in the list.
+     * Tasks are ordered by `priority ASC`. Because multiple tasks can share the same priority,
+     * a simple swap is not sufficient to guarantee a visible reorder, so we rewrite the whole
+     * list in the desired order and re-index all priorities sequentially.
+     */
+    fun moveTask(taskId: Long, up: Boolean) {
+        viewModelScope.launch {
+            val sorted = repository.getTaskSnapshot()
+                .sortedWith(compareBy<Task> { it.priority }.thenBy { it.id })
+            val index = sorted.indexOfFirst { it.id == taskId }
+            if (index == -1) return@launch
+
+            val targetIndex = if (up) index - 1 else index + 1
+            if (targetIndex !in sorted.indices) return@launch
+
+            val reordered = sorted.toMutableList()
+            val moved = reordered.removeAt(index)
+            reordered.add(targetIndex, moved)
+            reordered.forEachIndexed { i, task ->
+                val updated = task.copy(priority = i)
+                if (updated.priority != task.priority) {
+                    repository.saveTask(updated)
+                }
+            }
+            recalculatePipeline()
+        }
+    }
+
+    /**
+     * Move an activity up or down within its task by swapping description/achieved with the adjacent
+     * activity. Activities are displayed in ID order, so swapping content effectively reorders them
+     * while preserving stable IDs (for checkbox toggles and deletes).
+     */
+    fun moveActivity(taskId: Long, activityId: Long, up: Boolean) {
+        viewModelScope.launch {
+            val task = repository.getTask(taskId) ?: return@launch
+            val sorted = task.activities.sortedBy { it.id }
+            val index = sorted.indexOfFirst { it.id == activityId }
+            if (index == -1) return@launch
+            val target = if (up) index - 1 else index + 1
+            if (target !in sorted.indices) return@launch
+
+            val current = sorted[index]
+            val neighbor = sorted[target]
+            val swappedActivities = sorted.mapIndexed { i, act ->
+                when (i) {
+                    index -> act.copy(
+                        description = neighbor.description,
+                        achieved = neighbor.achieved
+                    )
+                    target -> act.copy(
+                        description = current.description,
+                        achieved = current.achieved
+                    )
+                    else -> act
+                }
+            }
+            val updated = task.copy(activities = swappedActivities)
+            repository.saveTask(updated)
+            recalculatePipeline()
+        }
+    }
+
+        /**
+     * Triggers a cloud sync attempt via the real SyncEngine.
+     *
+     * Returns a user-facing status string describing the sync outcome.
+     */
+    suspend fun syncNow(): String {
+        val result = syncEngine.sync()
+        return when (result) {
+            is SyncResult.Success ->
+                "Cloud sync OK: uploaded ${result.uploaded}, downloaded ${result.downloaded}"
+            is SyncResult.Failure ->
+                "Cloud sync failed: ${result.message}"
+            SyncResult.Offline ->
+                "Cloud sync offline"
         }
     }
 
