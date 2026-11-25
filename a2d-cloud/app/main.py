@@ -45,6 +45,10 @@ async def readyz():
 async def login_page():
     return FileResponse("app/web/templates/login.html")
 
+@app.get("/dashboard")
+async def dashboard_page():
+    return FileResponse("app/web/templates/dashboard.html")
+
 @app.get("/")
 async def root():
-    return {"service": "a2d-cloud", "version": "0.1.0", "login": "/login"}
+    return {"service": "a2d-cloud", "version": "0.1.0", "login": "/login", "dashboard": "/dashboard"}

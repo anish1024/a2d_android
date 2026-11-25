@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>A2D Cloud Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <div class="login-card">
+        <h1>A2D Cloud Dashboard</h1>
+        <p id="subtitle">Loading tasks…</p>
+
+        <table class="tasks-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Description</th>
+                    <th>Priority</th>
+                    <th>Context</th>
+                    <th>Completed</th>
+                    <th>Updated</th>
+                </tr>
+            </thead>
+            <tbody id="taskTableBody"></tbody>
+        </table>
+
+        <div class="actions">
+            <button id="exportBtn" class="secondary">Export JSON</button>
+            <button id="importBtn">Import JSON</button>
+            <input type="file" id="importFile" accept=".json,application/json" style="display:none;">
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

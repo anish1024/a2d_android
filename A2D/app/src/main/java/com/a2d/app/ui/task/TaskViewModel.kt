@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,6 +39,13 @@ class TaskViewModel @Inject constructor(
 
     private val _milestoneOutput = MutableStateFlow(0)
     val milestoneOutput: StateFlow<Int> = _milestoneOutput.asStateFlow()
+
+    init {
+        // Auto-sync on app start (when task list first loads) for bidirectional convergence
+        viewModelScope.launch(Dispatchers.IO) {
+            syncEngine.sync()
+        }
+    }
 
     fun selectTask(taskId: Long) {
         selectedTaskId.value = taskId

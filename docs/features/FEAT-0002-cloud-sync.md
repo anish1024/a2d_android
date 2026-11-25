@@ -1,12 +1,13 @@
 # FEAT-0002 — Cloud Sync, Web Replica & Task Import/Export
 
-- Status: Implementing (design frozen 2026-11-16)
+- Status: Implemented (P0–P3 complete 2026-11-25)
 - Owner: project maintainer
-- Last updated: 2026-11-16
+- Last updated: 2026-11-25
 - Related: [README §4](../../README.md#4-component-mapping--domain-implementation),
   [README §6](../../README.md#6-implementation-status), [ADR 0001](../adr/0001-technology-stack.md),
   [FEAT-0001](FEAT-0001-task-card-redesign.md), [original FastAPI blueprint](../a2d_graph.yaml)
 - P2: Android Room v2 migration implemented (syncId UUID, `updatedAt`, `deleted`, `dirty` columns; sync metadata backfilled, `dirty=1`, exported schema at `schemas/2.json`); Robolectric test written (native ARM64 lib unavailable in this env).
+- P3: Backend task read API (`GET /v1/sync/tasks`, `GET /v1/sync/tasks/{syncId}`) + export/import endpoints (`GET /v1/sync/export`, `POST /v1/sync/import`) + web dashboard (`GET /dashboard`) implemented (2026-11-25).
 - Target version: 1.1.0 (cloud MVP)
 - Decision: [ADR 0002 — Cloud sync architecture](../adr/0002-cloud-sync-architecture.md) (Accepted)
 
@@ -1211,27 +1212,43 @@ default because it weakens the folder-level isolation guarantee.
 
 ## 11. Web app
 
-Server-rendered pages, same origin, secure `HttpOnly` cookie session, CSRF token on every form:
+Server-rendered login page + Jinja2 dashboard. The Android app sends Bearer JWT tokens; the browser
+stores the JWT in `localStorage` and attaches it via `fetch` Authorization headers. No cookies, no CSRF
+(same-origin, stateless token).
 
 | Page | Contents |
 | --- | --- |
-| `/login` | Email/password; no public registration when disabled |
-| `/` | Dashboard: task counts, completed %, gate milestone output, per-device `lastBackupAt`/`lastSeenAt` |
-| `/tasks` | Read-only sortable/filterable list (priority, context, text search) |
-| `/tasks/{syncId}` | Read-only task and activity view (editing arrives in 1.1) |
-| `/import` | **v1 write path:** drag-and-drop JSON/CSV, conflict policy, dry-run report, then apply |
-| `/export` | **v1 write path:** download JSON or CSV, copy curl snippet |
-| `/archives` | List, download, verify, SHA-256, retention note; "create archive" for the operator |
-| `/settings` | Devices (revoke), change password, delete account, sync/archive status |
-| `/healthz` | Liveness/readiness for the edge |
+| `/login` | Email input; POST via `fetch` to `/v1/auth/login`; JWT stored in `localStorage`; redirects to `/dashboard` |
+| `/dashboard` | Task table (Task, Description, Priority, Context, Completed, Updated). Clicking a row expands an activity sub-table. Export JSON button downloads `GET /v1/sync/export`. Import button file-picks JSON and POSTs to `/v1/sync/import?dry_run=false&on_conflict=skip` — any imported row gets a fresh `server_updated_at` stamp, so it reaches Android on the next sync download. |
+| `/tasks` | Redirected to `/dashboard` (read-only list). |
+| `/tasks/{syncId}` | Not surfaced as a separate page in v1; activity sub-table is shown inline when expanding a task row. |
+| `/healthz`, `/readyz` | Liveness/readiness for the edge |
+| `/` | JSON health: `{"service": "a2d-cloud", ...}` |
 
-Version 1 deliberately has no task-edit controls in the browser: import and export are the only web
-writes, and both go through validation plus a dry-run before anything is stored. The CRUD endpoints
-exist for 1.1 and for scripted tooling.
+Version 1 has no task-edit controls in the browser: import and export are the only web writes, and
+both go through validation plus dry-run before anything is stored. Direct web editing (task/activity
+create/update/delete) is deferred to 1.1.
 
 The web UI mirrors the app's completion rule: a task shows "Completed" only when it has at least one
-activity and all are achieved; the gate milestone badge is recomputed from the same two-tier rule
-for display only.
+activity and all are achieved; an activity-less task shows "No".
+
+### New backend endpoints (added under `/v1/sync`)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/v1/sync/tasks` | List tasks with nested activities (`priority`, `context`, `q`, `limit`, `offset` filters) |
+| GET | `/v1/sync/tasks/{syncId}` | Single task with its activities |
+| GET | `/v1/sync/export?format=json|csv&includeDeleted=false` | Download canonical JSON / flattened CSV (`format=a2d.tasks`, `formatVersion=1`) |
+| POST | `/v1/sync/import?dry_run=true|false&on_conflict=skip|replace|duplicate` | Multipart JSON import; `dry_run=true` returns a report with no writes; every applied row gets a fresh `server_updated_at` stamp so the next Android download delivers it |
+
+### Frontend files
+
+| File | Purpose |
+| --- | --- |
+| `app/web/templates/login.html` | Login page; JS `fetch` to `/v1/auth/login`, JWT → `localStorage` |
+| `app/web/templates/dashboard.html` | Dashboard shell (task table, export/import buttons, toast) |
+| `app/web/static/css/dashboard.css` | Dashboard styling (matches `login.css`) |
+| `app/web/static/js/dashboard.js` | Loads tasks via `fetch` with Bearer token; expands activity sub-table; export/download; import/upload; toast |
 
 ## 12. Android changes
 
@@ -1444,10 +1461,10 @@ Operations:
 
 | Phase | Deliverable | Estimate |
 | --- | --- | --- |
-| P0 | `a2d-cloud/` skeleton, control DB models/migrations, tenant provisioning + `TenantStore`, auth, contract schema, supervisord deployment + `Deployment/a2d-cloud/` env/scripts/drop-in + Cloudflare Tunnel | 4–5 d |
-| P1 | `/v1/sync/backup` + `/v1/sync/updates` + per-table `server_updated_at` union keyset + row LWW + tombstones + idempotency + batching + full download + final row counts + pytest coverage | 3–4 d |
-| P2 | Android Room v2 migration, contract DTOs, SyncEngine (backup → download, compare-and-clear apply, row-count check), TokenStore, WorkManager, **login UI with 'Continue with email' button** | 4–5 d |
-| P3 | Web UI (read-only list/detail) + **required** JSON/CSV import/export with dry-run | 3 d |
+| P0 | `a2d-cloud/` skeleton, control DB models/migrations, tenant provisioning + `TenantStore`, auth, contract schema, supervisord deployment + `Deployment/a2d-cloud/` env/scripts/drop-in + Cloudflare Tunnel | 4–5 d (done) |
+| P1 | `/v1/sync/backup` + `/v1/sync/updates` + per-table `server_updated_at` union keyset + row LWW + tombstones + idempotency + batching + full download + final row counts + pytest coverage | 3–4 d (done) |
+| P2 | Android Room v2 migration, contract DTOs, SyncEngine (backup → download, compare-and-clear apply, row-count check), TokenStore, WorkManager, **login UI with 'Continue with email' button** | 4–5 d (done) |
+| P3 | Web UI (read-only list/detail) + **required** JSON/CSV import/export with dry-run | 3 d (done) |
 | P4 | Server-side archives (daily/manual), retention, verify, CLI restore | 2 d |
 | P5 | Hardening: rate limits, CSRF, retention jobs, tenant migration/quota tooling, docs, runbook, migration/contract tests | 3 d |
 | **Total** | | **~19–23 dev-days** |

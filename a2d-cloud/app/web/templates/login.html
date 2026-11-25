@@ -2,18 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>A2D Cloud Login</title>
+    <title>A2D Cloud</title>
     <link rel="stylesheet" href="/static/css/login.css">
 </head>
 <body>
     <div class="login-card">
         <h1>Welcome to A2D</h1>
         <p>Enter your email to continue.</p>
-        <form id="login-form" method="POST" action="/auth/login">
+        <form id="login-form">
             <label for="email">Email</label>
             <input type="email" id="email" name="email" placeholder="you@example.com" required>
             <button type="submit">Continue with Email</button>
         </form>
     </div>
+
+    <script>
+        const form = document.getElementById('login-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = form.email.value.trim();
+            const response = await fetch('/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ email })
+            });
+            if (!response.ok) {
+                alert('Login failed — ' + (await response.text()));
+                return;
+            }
+            const data = await response.json();
+            // Store JWT in localStorage
+            localStorage.setItem('a2d_token', data.access_token);
+            // Redirect to dashboard
+            window.location.href = '/dashboard';
+        });
+    </script>
 </body>
 </html>

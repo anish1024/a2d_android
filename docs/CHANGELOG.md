@@ -53,6 +53,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   new columns, and backfill. **Note:** the test compiles and is wired into `testDebugUnitTest` but
   currently fails on this ARM64 host because Robolectric needs a native `conscrypt` library that is
   not available (environment limitation, not a code defect); the other 11 unit tests pass.
+- **Web dashboard + import/export + auto-sync convergence (FEAT-0002 P3).**
+  - Backend `GET /v1/sync/tasks` + `GET /v1/sync/tasks/{syncId}`: read-only task list/detail with
+    nested activities (Bear token auth).
+  - Backend `GET /v1/sync/export` + `POST /v1/sync/import`: canonical JSON/CSV export and
+    validated JSON import with dry-run and conflict policy (`skip`/`replace`/`duplicate`).
+    Every applied row gets a fresh `server_updated_at` stamp so the next Android download delivers it.
+  - Web UI: `/login` (JS `fetch` to `/v1/auth/login`, JWT in `localStorage`), `/dashboard` (task
+    table with expandable activity sub-table, Export JSON / Import JSON buttons, toast notifications).
+  - Android auto-sync: `LoginViewModel` calls `syncEngine.sync()` after login success; `TaskViewModel`
+    calls `syncEngine.sync()` on creation (app start). Bidirectional convergence — web import reaches
+    Android on next sync; Android edits reach cloud on next backup.
 
 ### Changed
 

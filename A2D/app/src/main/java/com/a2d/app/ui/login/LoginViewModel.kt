@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.a2d.app.data.network.ApiClient
 import com.a2d.app.data.network.TokenStore
 import com.a2d.app.data.network.HealthResponse
+import com.a2d.app.data.network.SyncResult
+import com.a2d.app.data.sync.SyncEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +31,8 @@ data class LoginUiState(
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val apiClient: ApiClient,
-    private val tokenStore: TokenStore
+    private val tokenStore: TokenStore,
+    private val syncEngine: SyncEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -100,6 +103,9 @@ class LoginViewModel @Inject constructor(
                             userId = body.userId,
                             email = _uiState.value.email
                         )
+                        // Auto-sync after login to converge with cloud (downloads web-imported data)
+                        val syncResult = syncEngine.sync()
+                        Log.d("LoginViewModel", "Post-login sync: $syncResult")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             loginSucceeded = true
