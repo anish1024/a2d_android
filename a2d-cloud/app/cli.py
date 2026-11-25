@@ -42,9 +42,10 @@ def cmd_create_user(args):
 
 def cmd_migrate_users(args):
     """Apply pending tenant migrations to all users."""
-    from app.control_db import get_control_session
+    from app.control_db import get_control_session, init_control_db
     from app.tenant import init_tenant_store
     
+    init_control_db()
     tenant_store = init_tenant_store("./data")
     
     with get_control_session() as session:
