@@ -369,7 +369,7 @@ async def sync_backup_endpoint(
 
 
 @router.get("/updates", response_model=SyncUpdatesResponse)
-async def sync_updates(
+async def sync_updates_endpoint(
     lastDownloadAt: str = Query(..., description="Opaque token from previous download response"),
     limit: int = Query(500, ge=1, le=500, description="Max rows per page"),
     user: dict = Depends(get_current_user),

@@ -191,9 +191,9 @@ def sync_backup(
                             {
                                 "id": sync_id,
                                 "task_name": row_data.get("taskName", ""),
-                                "description": row_data.get("description", ""),
+                                "description": row_data.get("description") or "",
                                 "priority": row_data.get("priority", 1),
-                                "context": row_data.get("context", "No Context"),
+                                "context": row_data.get("context") or "No Context",
                                 "achieved": 1 if row_data.get("achieved", False) else 0,
                                 "creation_time": row_data.get("creationTime", ""),
                                 "updated_at": client_updated_at,
@@ -214,7 +214,7 @@ def sync_backup(
                             {
                                 "id": sync_id,
                                 "task_id": row_data.get("taskSyncId"),
-                                "description": row_data.get("description", ""),
+                                "description": row_data.get("description") or "",
                                 "achieved": 1 if row_data.get("achieved", False) else 0,
                                 "updated_at": client_updated_at,
                                 "deleted_at": now if deleted else None,
@@ -250,9 +250,9 @@ def sync_backup(
                             {
                                 "id": sync_id,
                                 "task_name": row_data.get("taskName", ""),
-                                "description": row_data.get("description", ""),
+                                "description": row_data.get("description") or "",
                                 "priority": row_data.get("priority", 1),
-                                "context": row_data.get("context", "No Context"),
+                                "context": row_data.get("context") or "No Context",
                                 "achieved": 1 if row_data.get("achieved", False) else 0,
                                 "creation_time": row_data.get("creationTime", ""),
                                 "updated_at": client_updated_at,
@@ -273,7 +273,7 @@ def sync_backup(
                             {
                                 "id": sync_id,
                                 "task_id": row_data.get("taskSyncId"),
-                                "description": row_data.get("description", ""),
+                                "description": row_data.get("description") or "",
                                 "achieved": 1 if row_data.get("achieved", False) else 0,
                                 "updated_at": client_updated_at,
                                 "deleted_at": now if deleted else None,

@@ -32,8 +32,10 @@ class TenantStore:
     def tenant_dir(self, user_id: str) -> pathlib.Path:
         """Return the tenant directory path for a user. Creates if needed."""
         tenant_path = self.users_dir / user_id
+        existed = tenant_path.exists()
         tenant_path.mkdir(parents=True, exist_ok=True)
-        tenant_path.chmod(0o700)
+        if not existed:
+            tenant_path.chmod(0o700)
         return tenant_path
 
     def tenant_db_path(self, user_id: str) -> str:
