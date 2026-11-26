@@ -24,7 +24,8 @@ fun TaskDetailScreen(
     onAddActivity: (Long) -> Unit,
     onDeleteActivity: (Long, Long) -> Unit,
     onDeleteTask: (Long) -> Unit,
-    onMoveTaskActivity: (Long, Long, Boolean) -> Unit
+    onMoveTaskActivity: (Long, Long, Boolean) -> Unit,
+    onUpdateActivity: (Long, Long, String) -> Unit
 ) {
     var showTaskDeleteDialog by remember { mutableStateOf(false) }
     var pendingActivityDeleteId by remember { mutableStateOf<Long?>(null) }
@@ -75,6 +76,9 @@ fun TaskDetailScreen(
                             onToggleActivity(taskId, activity.id, it)
                         },
                         onDelete = { pendingActivityDeleteId = activity.id },
+                        onUpdateActivity = { newDesc ->
+                            onUpdateActivity(taskId, activity.id, newDesc)
+                        },
                         isDragging = draggingActivityId == activity.id,
                         onDragStateChange = { dragging ->
                             draggingActivityId = if (dragging) activity.id else null

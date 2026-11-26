@@ -182,12 +182,14 @@ fun TaskCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Drag handle for task reordering
-                DragHandle(
-                    onMoveUp = { onMoveTask(task.id, true) },
-                    onMoveDown = { onMoveTask(task.id, false) },
-                    onDragStateChange = onDragStateChange
-                )
+                // Drag handle for task reordering - only visible in edit mode
+                if (isEditing) {
+                    DragHandle(
+                        onMoveUp = { onMoveTask(task.id, true) },
+                        onMoveDown = { onMoveTask(task.id, false) },
+                        onDragStateChange = onDragStateChange
+                    )
+                }
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -297,24 +299,6 @@ fun TaskCard(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { exitEditMode() }) {
-                            Icon(
-                                imageVector = Icons.Filled.Done,
-                                contentDescription = "Save",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Save")
-                        }
-                        Button(onClick = { exitEditMode(saveChanges = false) }) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Cancel",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Cancel")
-                        }
                     }
 
                     Box(
@@ -333,6 +317,8 @@ fun TaskCard(
                                     onMoveDown = { onMoveTaskActivity(task.id, activity.id, false) },
                                     onToggleActivity = { onToggleActivity(activity.id, it) },
                                     onDelete = { onDeleteActivity(activity.id) },
+                                    onUpdateActivity = { newDesc -> onUpdateActivity(activity.id, newDesc) },
+                                    isEditing = isEditing,
                                     isDragging = draggingActivityId == activity.id,
                                     onDragStateChange = { dragging ->
                                         draggingActivityId = if (dragging) activity.id else null
@@ -440,10 +426,16 @@ fun ActivityRow(
     onMoveDown: () -> Unit,
     onToggleActivity: (Boolean) -> Unit,
     onDelete: () -> Unit,
+    onUpdateActivity: (String) -> Unit,
+    isEditing: Boolean = false,
     isDragging: Boolean = false,
     onDragStateChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+    var editingActivity by remember { mutableStateOf(false) }
+    var draftDescription by remember(activity.id) { mutableStateOf(activity.description) }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -461,14 +453,16 @@ fun ActivityRow(
                 }
             )
     ) {
-        // Drag handle for activity reordering
-        DragHandle(
-            onMoveUp = onMoveUp,
-            onMoveDown = onMoveDown,
-            onDragStateChange = onDragStateChange
-        )
+        // Drag handle for activity reordering - only visible in edit mode
+        if (isEditing) {
+            DragHandle(
+                onMoveUp = onMoveUp,
+                onMoveDown = onMoveDown,
+                onDragStateChange = onDragStateChange
+            )
+        }
         Text(
-            text = activity.description,
+            text = if (editingActivity) draftDescription else activity.description,
             style = MaterialTheme.typography.bodyLarge,
             color = if (activity.achieved) {
                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -484,12 +478,62 @@ fun ActivityRow(
                 .weight(1f)
                 .clickable { onToggleActivity(!activity.achieved) }
         )
-        IconButton(onClick = onDelete) {
+        // 3-dot menu for Edit/Delete
+        IconButton(onClick = { showMenu = true }) {
             Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = "Delete activity",
-                tint = MaterialTheme.colorScheme.error
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = "More options"
             )
+        }
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Edit") },
+                onClick = {
+                    showMenu = false
+                    editingActivity = true
+                },
+                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) }
+            )
+            DropdownMenuItem(
+                text = { Text("Delete") },
+                onClick = {
+                    showMenu = false
+                    onDelete()
+                },
+                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) }
+            )
+        }
+    }
+
+    // Edit mode for activity description
+    if (editingActivity) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+            OutlinedTextField(
+                value = draftDescription,
+                onValueChange = { draftDescription = it },
+                label = { Text("Description") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(onClick = { editingActivity = false }) {
+                    Text("Cancel")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = {
+                    onUpdateActivity(draftDescription)
+                    editingActivity = false
+                }) {
+                    Text("Save")
+                }
+            }
         }
     }
 }

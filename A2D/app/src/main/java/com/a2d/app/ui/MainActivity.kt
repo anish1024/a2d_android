@@ -221,6 +221,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onMoveTaskActivity = { taskId, activityId, up ->
                                     taskVm.moveActivity(taskId, activityId, up)
+                                },
+                                onUpdateActivity = { id, activityId, newDesc ->
+                                    taskVm.updateActivity(id, activityId, newDesc)
                                 }
                             )
                         }
