@@ -451,6 +451,7 @@ fun ActivityRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
+            .padding(start = 8.dp)
             .graphicsLayer {
                 alpha = if (isDragging) 0.9f else 1f
                 scaleX = if (isDragging) 1.02f else 1f
