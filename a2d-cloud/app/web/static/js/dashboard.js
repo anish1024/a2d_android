@@ -22,19 +22,23 @@ function getUserIdFromToken(token) {
     }
 }
 
+
+
+function b64urlDecode(str) {
+    const s = str.replace(/-/g, '+').replace(/_/g, '/');
+    s += '='.repeat((4 - (s.length % 4)) % 4);
+    return atob(s);
+}
+
 function updateWelcomeText() {
     const token = getToken();
     if (!token) return;
-    const payload = token.split('.')[1];
-    let base64Url = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const pad = 4 - (base64Url.length % 4);
-    if (pad > 0) base64Url += '='.repeat(pad);
-    const decoded = atob(base64Url);
-    let obj;
-    try { obj = JSON.parse(decoded); } catch (e) { obj = {}; }
-    const userId = obj.sub || '';
+    const payloadPart = token.split('.')[1];
+    let obj = {};
+    try { obj = JSON.parse(b64urlDecode(payloadPart)); } catch (e) { obj = {}; }
+    const email = obj.email || obj.sub || '';
     const span = document.getElementById('userId');
-    span.textContent = `Welcome ${userId}!!`;
+    span.textContent = `Welcome ${email}!!`;
 }
 
 function exportSampleJson() {
