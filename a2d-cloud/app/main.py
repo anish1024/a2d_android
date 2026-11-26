@@ -51,4 +51,4 @@ async def dashboard_page():
 
 @app.get("/")
 async def root():
-    return {"service": "a2d-cloud", "version": "0.1.0", "login": "/login", "dashboard": "/dashboard"}
+    return FileResponse("app/web/templates/dashboard.html")

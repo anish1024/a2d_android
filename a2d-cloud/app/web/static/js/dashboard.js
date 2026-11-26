@@ -6,6 +6,82 @@ function getToken() {
     return localStorage.getItem(A2D_TOKEN_KEY);
 }
 
+function getUserIdFromToken(token) {
+    try {
+        const payload = token.split('.')[1];
+        const base64Url = payload.replace(/-/g, '+').replace(/_/g, '/');
+        // Add padding if needed
+        const pad = 4 - (base64Url.length % 4);
+        if (pad > 0) base64Url += '='.repeat(pad);
+        const decoded = atob(base64Url);
+        const obj = JSON.parse(decoded);
+        return obj.sub || '';
+    } catch (e) {
+        console.warn('Unable to decode token for user id', e);
+        return '';
+    }
+}
+
+function updateWelcomeText() {
+    const token = getToken();
+    if (!token) return;
+    const userId = getUserIdFromToken(token);
+    const span = document.getElementById('userId');
+    if (span) {
+        span.textContent = userId ? `Welcome ${userId}!!` : 'Welcome !!';
+    }
+}
+
+function exportSampleJson() {
+    const sampleData = {
+        "tasks": [
+            {
+                "id": 1,
+                "task_name": "Sample Task 1",
+                "description": "This is a sample task description.",
+                "priority": 1,
+                "context": "Sample context",
+                "achieved": false,
+                "creation_time": "2023-01-01T00:00:00Z",
+                "updated_at": "2023-01-01T00:00:00Z",
+                "activities": [
+                    {
+                        "id": 101,
+                        "task_id": 1,
+                        "description": "Sample activity",
+                        "achieved": false,
+                        "updated_at": "2023-01-01T00:00:00Z",
+                        "deleted_at": null
+                    }
+                ]
+            },
+            {
+                "id": 2,
+                "task_name": "Sample Task 2",
+                "description": "Another sample task.",
+                "priority": 2,
+                "context": "Sample context 2",
+                "achieved": true,
+                "creation_time": "2023-01-02T00:00:00Z",
+                "updated_at": "2023-01-02T00:00:00Z",
+                "activities": []
+            }
+        ]
+    };
+    const blob = new Blob([JSON.stringify(sampleData, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_tasks.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function logout() {
+    localStorage.removeItem('a2d_token');
+    window.location.href = './login.html';
+}
+
 async function apiGet(path, params) {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     const resp = await fetch(`${A2D_API_BASE}${path}${qs}`, {
@@ -166,6 +242,8 @@ function toast(msg) {
 
 // Wire controls
 document.getElementById('exportBtn').addEventListener('click', doExport);
+document.getElementById('sampleBtn').addEventListener('click', exportSampleJson);
+document.getElementById('logoutBtn').addEventListener('click', logout);
 
 const importFile = document.getElementById('importFile');
 const importBtn = document.getElementById('importBtn');
@@ -182,5 +260,11 @@ importFile.addEventListener('change', async (e) => {
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
+    const token = getToken();
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
     loadTasks();
+    updateWelcomeText();
 });

@@ -20,6 +20,35 @@ body {
     color: #1a1a1a;
 }
 
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+button.logout {
+    background: transparent;
+    border: none;
+    color: #c00;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 4px 8px;
+    margin-left: auto;
+}
+
+button.logout:hover {
+    color: #900;
+}
+
+.welcome-text {
+    margin-top: 4px;
+    font-size: 14px;
+    color: #555;
+}
+
 .login-card p {
     font-size: 14px;
     color: #666;
@@ -131,4 +160,39 @@ button:disabled {
 
 input[type="file"] {
     margin: 12px 0;
+}
+
+/* Responsive adjustments for tablet / mobile */
+@media (max-width: 768px) {
+    body {
+        padding: 12px;
+    }
+    .login-card {
+        padding: 16px;
+    }
+    .header {
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    button.logout {
+        margin-left: 0;
+        margin-top: 4px;
+    }
+    .welcome-text {
+        margin-top: 8px;
+    }
+    .actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .tasks-table th,
+    .tasks-table td {
+        padding: 8px 10px;
+    }
+    .tasks-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
 }
