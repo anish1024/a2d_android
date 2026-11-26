@@ -460,7 +460,7 @@ fun ActivityRow(
                 if (isDragging) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                 } else {
-                    Color(0xFFB2DFDB)  // Light teal, lighter than divider #4DB6AC but more visible
+                    Color(0xFFA6DBD6)  // Halfway between divider #4DB6AC and white
                 }
             )
     ) {
