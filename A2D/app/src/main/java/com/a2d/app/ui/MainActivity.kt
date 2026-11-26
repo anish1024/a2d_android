@@ -165,6 +165,7 @@ class MainActivity : ComponentActivity() {
                                 TaskListScreen(
                                     tasks = tasks,
                                     milestoneOutput = milestone,
+                                    welcomeText = authVm.userEmail,
                                     onTaskClick = { taskId ->
                                         navController.navigate("taskDetail/$taskId")
                                     },

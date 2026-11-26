@@ -53,6 +53,7 @@ import com.a2d.app.domain.model.Task
 fun TaskListScreen(
     tasks: List<Task>,
     milestoneOutput: Int,
+    welcomeText: String = "",
     onTaskClick: (Long) -> Unit,
     onToggleActivity: (Long, Long, Boolean) -> Unit,
     onAddActivity: (Long) -> Unit,
@@ -77,8 +78,8 @@ fun TaskListScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (milestoneOutput == 1) "Milestone Complete [GATE 1]" else "Milestone Incomplete [GATE 0]",
-                color = if (milestoneOutput == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                text = "Welcome $welcomeText",
+                color = Color(0xFFA6DBD6),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f)
             )

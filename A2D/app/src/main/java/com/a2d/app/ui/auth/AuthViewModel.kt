@@ -30,6 +30,9 @@ class AuthViewModel @Inject constructor(
     private val _isAuthenticated = MutableStateFlow(tokenStore.isAuthenticated())
     val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
 
+    /** Email of the currently logged-in user, or empty string if none. */
+    val userEmail: String get() = tokenStore.getUserEmail()
+
     init {
         _isAuthenticated.value = tokenStore.isAuthenticated()
     }
