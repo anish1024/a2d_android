@@ -41,6 +41,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import com.a2d.app.domain.model.ActionItem
 import com.a2d.app.domain.model.Task
@@ -463,7 +465,12 @@ fun ActivityRow(
         }
         Text(
             text = if (editingActivity) draftDescription else activity.description,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontSize = TextUnit(
+                    MaterialTheme.typography.titleMedium.fontSize.value - 1f,
+                    TextUnitType.Sp
+                ),
+            ),
             color = if (activity.achieved) {
                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             } else {
