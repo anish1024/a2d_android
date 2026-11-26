@@ -277,13 +277,13 @@ fun TaskCard(
                 }
             }
 
-            // Lighter teal divider separating task header from activity list body
+            // Divider separating task header from activity list body
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
                 thickness = 2.dp,
-                color = Color(0xFF4DB6AC)
+                color = Color(0xFFC5EDE9)
             )
 
             if (isExpanded) {
@@ -457,13 +457,6 @@ fun ActivityRow(
                 scaleX = if (isDragging) 1.02f else 1f
                 scaleY = if (isDragging) 1.02f else 1f
             }
-            .background(
-                if (isDragging) {
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                } else {
-                    Color(0xFFA6DBD6)  // Halfway between divider #4DB6AC and white
-                }
-            )
     ) {
         // Drag handle for activity reordering - only visible in edit mode
         if (isEditing) {
