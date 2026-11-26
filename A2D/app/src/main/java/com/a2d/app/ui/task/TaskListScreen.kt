@@ -277,6 +277,15 @@ fun TaskCard(
                 }
             }
 
+            // Solid dark gray divider separating task header from activity list body
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                thickness = 1.dp,
+                color = Color(0xFF555555)
+            )
+
             if (isExpanded) {
                 Column(
                     modifier = Modifier
