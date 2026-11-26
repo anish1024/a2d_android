@@ -5,6 +5,8 @@ package com.a2d.app.ui.task
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -171,7 +173,14 @@ fun TaskCard(
     }
 
     ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                BorderStroke(
+                    color = Color(0xFF555555),
+                    width = 2.dp
+                )
+            ),
         elevation = CardDefaults.elevatedCardElevation(
             defaultElevation = if (isDragging) 12.dp else 1.dp
         )
