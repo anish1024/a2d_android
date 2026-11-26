@@ -282,7 +282,7 @@ fun TaskCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                thickness = 2.dp,
+                thickness = 1.dp,
                 color = Color(0xFFC5EDE9)
             )
 
