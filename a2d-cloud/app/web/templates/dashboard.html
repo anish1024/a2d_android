@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>A2D Cloud Dashboard</title>
-    <link rel="stylesheet" href="/static/css/dashboard.css?v=1.1">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=3">
 </head>
 <body>
     <div class="login-card">
@@ -12,7 +12,7 @@
             <h1>A2D Cloud Dashboard</h1>
             <button id="logoutBtn" class="logout">Logout</button>
         </div>
-        <div class="welcome-text">Welcome <span id="userId">!!</span></div>
+        <div class="welcome-text"><span id="userId"></span></div>
         <p id="subtitle">Loading tasks…</p>
 
         <table class="tasks-table">
@@ -35,10 +35,11 @@
             <button id="sampleBtn" class="secondary">JSON sample</button>
             <input type="file" id="importFile" accept=".json,application/json" style="display:none;">
         </div>
+        <p id="errorMsg" class="error-msg" style="color:red; display:none; margin-top:12px;"></p>
     </div>
 
     <div class="toast" id="toast"></div>
 
-    <script src="/static/js/dashboard.js?v=1.1"></script>
+    <script src="/static/js/dashboard.js?v=3"></script>
 </body>
 </html>

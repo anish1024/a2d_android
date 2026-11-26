@@ -25,45 +25,55 @@ function getUserIdFromToken(token) {
 function updateWelcomeText() {
     const token = getToken();
     if (!token) return;
-    const userId = getUserIdFromToken(token);
+    const payload = token.split('.')[1];
+    let base64Url = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = 4 - (base64Url.length % 4);
+    if (pad > 0) base64Url += '='.repeat(pad);
+    const decoded = atob(base64Url);
+    let obj;
+    try { obj = JSON.parse(decoded); } catch (e) { obj = {}; }
+    const userId = obj.sub || '';
     const span = document.getElementById('userId');
-    if (span) {
-        span.textContent = userId ? `Welcome ${userId}!!` : 'Welcome !!';
-    }
+    span.textContent = `Welcome ${userId}!!`;
 }
 
 function exportSampleJson() {
+    const now = Date.now();
     const sampleData = {
+        "format": "a2d.tasks",
+        "formatVersion": 1,
         "tasks": [
             {
-                "id": 1,
-                "task_name": "Sample Task 1",
+                "syncId": "1",
+                "taskName": "Sample Task 1",
                 "description": "This is a sample task description.",
                 "priority": 1,
                 "context": "Sample context",
                 "achieved": false,
-                "creation_time": "2023-01-01T00:00:00Z",
-                "updated_at": "2023-01-01T00:00:00Z",
+                "creationTime": "2023-01-01T00:00:00Z",
+                "updatedAt": now,
+                "deleted": false,
                 "activities": [
                     {
-                        "id": 101,
-                        "task_id": 1,
+                        "syncId": "101",
+                        "taskId": "1",
                         "description": "Sample activity",
                         "achieved": false,
-                        "updated_at": "2023-01-01T00:00:00Z",
-                        "deleted_at": null
+                        "updatedAt": now,
+                        "deleted": false
                     }
                 ]
             },
             {
-                "id": 2,
-                "task_name": "Sample Task 2",
+                "syncId": "2",
+                "taskName": "Sample Task 2",
                 "description": "Another sample task.",
                 "priority": 2,
                 "context": "Sample context 2",
                 "achieved": true,
-                "creation_time": "2023-01-02T00:00:00Z",
-                "updated_at": "2023-01-02T00:00:00Z",
+                "creationTime": "2023-01-02T00:00:00Z",
+                "updatedAt": now,
+                "deleted": false,
                 "activities": []
             }
         ]
@@ -128,13 +138,16 @@ async function apiPostImport(file) {
 
 async function loadTasks() {
     const subtitle = document.getElementById('subtitle');
+    const err = document.getElementById('errorMsg');
     try {
         const data = await apiGet('/tasks');
         const tasks = data.tasks || [];
         renderTasks(tasks);
         subtitle.textContent = `${data.total ?? tasks.length} task(s)`;
+        if (err) { err.style.display = 'none'; }
     } catch (e) {
-        subtitle.textContent = 'Failed to load tasks';
+        if (err) { err.textContent = `Failed to load tasks: ${e.message}`; err.style.display = 'block'; }
+        else { subtitle.textContent = 'Failed to load tasks'; }
         toast(`Failed to load tasks: ${e.message}`);
     }
 }
