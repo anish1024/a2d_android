@@ -65,7 +65,7 @@ fun TaskDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 items(task.activities, key = { it.id }) { activity ->
                     ActivityRow(

@@ -319,7 +319,7 @@ fun TaskCard(
                     ) {
                         LazyColumn(
                             state = activityListState,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
                         ) {
                             items(task.activities, key = { it.id }) { activity ->
                                 ActivityRow(
