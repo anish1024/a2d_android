@@ -69,7 +69,7 @@
                 }
 
                 const data = await response.json();
-                localStorage.setItem('a2d_token', data.access_token);
+                localStorage.setItem('tokens', data.access_token);
                 window.location.href = '/dashboard';
             } catch (error) {
                 errorDiv.textContent = error.message;

@@ -36,7 +36,7 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def generate_token(user_id: str, device_id: str, ttl_seconds: int) -> str:
+def generate_token(user_id: str, device_id: str, ttl_seconds: int, email: Optional[str] = None) -> str:
     """Generate a signed JWT-like token."""
     now = int(time.time())
     payload = {
@@ -46,6 +46,8 @@ def generate_token(user_id: str, device_id: str, ttl_seconds: int) -> str:
         "exp": now + ttl_seconds,
         "jti": secrets.token_urlsafe(16),
     }
+    if email:
+        payload["email"] = email
     header = {"alg": "HS256", "typ": "JWT"}
     return _encode_jwt(header, payload, _settings.jwt_secret)
 

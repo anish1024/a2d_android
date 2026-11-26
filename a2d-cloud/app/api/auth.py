@@ -48,10 +48,10 @@ async def login(email: str = Form(...), password: str = Form(...)):
 
     now = int(time.time())
     access_token = generate_token(
-        user_id, device_id="", ttl_seconds=settings.access_token_ttl_seconds
+        user_id, device_id="", ttl_seconds=settings.access_token_ttl_seconds, email=user_email
     )
     refresh_token = generate_token(
-        user_id, device_id="", ttl_seconds=settings.refresh_token_ttl_seconds
+        user_id, device_id="", ttl_seconds=settings.refresh_token_ttl_seconds, email=user_email
     )
 
     return {
@@ -94,11 +94,12 @@ async def refresh_token(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=401, detail="Token missing user id")
 
     device_id = user.get("device_id", "")
+    email = user.get("email")
     access_token = generate_token(
-        user_id, device_id=device_id, ttl_seconds=settings.access_token_ttl_seconds
+        user_id, device_id=device_id, ttl_seconds=settings.access_token_ttl_seconds, email=email
     )
     refresh_token = generate_token(
-        user_id, device_id=device_id, ttl_seconds=settings.refresh_token_ttl_seconds
+        user_id, device_id=device_id, ttl_seconds=settings.refresh_token_ttl_seconds, email=email
     )
 
     return {
@@ -108,3 +109,9 @@ async def refresh_token(user: dict = Depends(get_current_user)):
         "expires_in": settings.access_token_ttl_seconds,
         "user_id": user_id,
     }
+
+
+@router.get("/me")
+async def me(current_user: dict = Depends(get_current_user)):
+    """Return the email address of the currently authenticated user."""
+    return {"email": current_user.get("email", current_user.get("sub", ""))}
